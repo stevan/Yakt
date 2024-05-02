@@ -67,7 +67,8 @@ class Actor::Ref {
     method address { $address }
     method context { $context }
 
-    method set_context ($ctx) { $context = $ctx }
+    method set_context ($ctx) { $context = $ctx  }
+    method remove_context     { $context = undef }
 
     method send ($message) {
         $context->send( $self, $message );
@@ -91,6 +92,8 @@ class Actor::Mailbox {
     method has_messages { !! scalar @messages }
 
     method activate ($system) {
+        $ref->set_context( Actor::Context->new( system => $system, ref => $ref ) );
+
         $behavior = $props->new_actor;
         $behavior->activate( $ref->context );
     }
@@ -98,6 +101,8 @@ class Actor::Mailbox {
     method deactivate ($system) {
         $behavior->deactivate( $ref->context );
         $behavior = undef;
+
+        $ref->remove_context;
 
         if (@messages) {
             $system->send_to_dead_letters( map [ $ref, $_ ], @messages );
@@ -154,16 +159,12 @@ class Actor::System {
     method init_ref { $init_ref }
 
     method spawn_actor ($path, $props) {
-        my $root = $init_ref ? $init_ref->address : $address;
-
-        my $ref = Actor::Ref->new( address => $root->with_path( $path ) );
-        $ref->set_context( Actor::Context->new( system => $self, ref => $ref ) );
-
+        my $root    = $init_ref ? $init_ref->address : $address;
+        my $ref     = Actor::Ref->new( address => $root->with_path( $path ) );
         my $mailbox = Actor::Mailbox->new( ref => $ref, props => $props );
+
         $mailbox->activate( $self );
-
         $mailboxes{ $ref->address->url } = $mailbox;
-
         return $ref;
     }
 
@@ -287,9 +288,7 @@ my $system = Actor::System->new(
 
 warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
 
-my $ping = $system->spawn_actor(
-    '/ping' => Actor::Props->new( class => 'Ping' )
-);
+my $ping = $system->spawn_actor( '/ping' => Actor::Props->new( class => 'Ping' ) );
 
 warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
 

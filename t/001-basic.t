@@ -40,6 +40,7 @@ class Actor::Context {
     field $system :param;
     field $ref    :param;
 
+    field $current_caller;
     field $current_sender;
     field $current_message;
 
@@ -79,11 +80,6 @@ class Actor::Ref {
     method context { $context }
 
     method set_context ($ctx) { $context = $ctx }
-
-    method send ($to, $message) {
-        $context->send( $to, $message );
-        return;
-    }
 }
 
 class Actor::Mailbox {
@@ -152,14 +148,23 @@ class Actor::Mailbox {
 class Actor::System {
     field $address :param;
 
+    field $init_ref;
+
     field @to_be_run;
     field %mailboxes;
     field @dead_letters;
 
-    method address { $address }
+    ADJUST {
+        $init_ref = $self->spawn_actor( '/~', Actor::Props->new( class => 'Actor::Behavior' ) );
+    }
+
+    method address  { $address  }
+    method init_ref { $init_ref }
 
     method spawn_actor ($path, $props) {
-        my $ref = Actor::Ref->new( address => $address->with_path( $path ) );
+        my $root = $init_ref ? $init_ref->address : $address;
+
+        my $ref = Actor::Ref->new( address => $root->with_path( $path ) );
         $ref->set_context( Actor::Context->new( system => $self, ref => $ref ) );
 
         my $mailbox = Actor::Mailbox->new( ref => $ref, props => $props );
@@ -205,7 +210,7 @@ class Actor::System {
 class Actor::Behavior {
     method activate   ($context) {}
     method deactivate ($context) {}
-    method accept     ($context, $message) { ... }
+    method accept     ($context, $message) {}
 }
 
 ## ----------------------------------------------------------------------------
@@ -286,7 +291,7 @@ my $ping = $system->spawn_actor(
 
 warn "Mailboxes: ",(join ', ' => $system->list_mailboxes),"\n";
 
-$system->deliver_message( $ping, $system, 'Ping' );
+$system->init_ref->context->send( $ping, 'Ping' );
 
 $system->tick foreach 0 .. 10;
 

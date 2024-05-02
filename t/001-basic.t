@@ -40,30 +40,18 @@ class Actor::Context {
     field $system :param;
     field $ref    :param;
 
-    field $current_caller;
-    field $current_sender;
     field $current_message;
 
-    method self    { $ref             }
-    method sender  { $current_sender  }
-    method message { $current_message }
+    method self { $ref }
 
-    method set_message_context ($sender, $message) {
-        $current_sender  = $sender;
-        $current_message = $message;
-    }
-
-    method clear_message_context {
-        $current_sender  = undef;
-        $current_message = undef;
-    }
+    method message :lvalue { $current_message }
 
     method spawn ($path, $props) {
         return $system->spawn_actor( $path, $props );
     }
 
     method send ($to, $message) {
-        $system->deliver_message( $to, $ref, $message );
+        $system->deliver_message( $to, $message );
         return;
     }
 
@@ -80,6 +68,11 @@ class Actor::Ref {
     method context { $context }
 
     method set_context ($ctx) { $context = $ctx }
+
+    method send ($message) {
+        $context->send( $self, $message );
+        return;
+    }
 }
 
 class Actor::Mailbox {
@@ -107,15 +100,15 @@ class Actor::Mailbox {
         $behavior = undef;
 
         if (@messages) {
-            $system->send_to_dead_letters( map [ $ref, @$_ ], @messages );
+            $system->send_to_dead_letters( map [ $ref, $_ ], @messages );
             @messages = ();
         }
     }
 
     # ...
 
-    method enqueue_message ( $from, $message ) {
-        push @messages => [ $from, $message ];
+    method enqueue_message ( $message ) {
+        push @messages => $message;
     }
 
     # ...
@@ -129,15 +122,14 @@ class Actor::Mailbox {
 
             my $context = $ref->context;
             while (@msgs) {
-                my ($from, $message) = (shift @msgs)->@*;
+                my $message = shift @msgs;
 
-                warn sprintf "TICK: to:(%s), from:(%s), msg:(%s)\n" => $ref->address->url, $from->address->url, $message;
+                warn sprintf "TICK: to:(%s), from:(%s), msg:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body;
 
-                $context->set_message_context( $from, $message );
-                unless ( $behavior->accept( $context, $message ) ) {
-                    push @dead_letters => $message;
-                }
-                $context->clear_message_context;
+                $context->message = $message;
+                $behavior->accept( $context, $message )
+                    or push @dead_letters => $message;
+                $context->message = undef;
             }
         }
 
@@ -155,7 +147,7 @@ class Actor::System {
     field @dead_letters;
 
     ADJUST {
-        $init_ref = $self->spawn_actor( '/~', Actor::Props->new( class => 'Actor::Behavior' ) );
+        $init_ref = $self->spawn_actor( '/', Actor::Props->new( class => 'Actor::Behavior' ) );
     }
 
     method address  { $address  }
@@ -181,13 +173,13 @@ class Actor::System {
         }
     }
 
-    method deliver_message ($to, $from, $message) {
+    method deliver_message ($to, $message) {
         if ( my $mailbox = $mailboxes{ $to->address->url } ) {
-            $mailbox->enqueue_message( $from, $message );
+            $mailbox->enqueue_message( $message );
             push @to_be_run => $mailbox;
         }
         else {
-            push @dead_letters => [ $to, $from, $message ];
+            push @dead_letters => [ $to, $message ];
         }
     }
 
@@ -206,6 +198,14 @@ class Actor::System {
 }
 
 ## ----------------------------------------------------------------------------
+
+class Actor::Message {
+    field $from :param;
+    field $body :param;
+
+    method from { $from }
+    method body { $body }
+}
 
 class Actor::Behavior {
     method activate   ($context) {}
@@ -238,13 +238,13 @@ class Ping :isa(Actor::Behavior) {
     }
 
     method accept ($context, $message) {
-        if ( $message eq 'Ping' ) {
+        if ( $message->body eq 'Ping' ) {
             $count++;
             say("Got Ping($count) sending Pong");
-            $context->send( $pong, 'Pong' );
+            $pong->send( Actor::Message->new( from => $context->self, body => 'Pong' ) );
             return true;
         } else {
-            say("Unknown message: $message");
+            say("Unknown message: ".$message->body);
             return false;
         }
     }
@@ -265,13 +265,13 @@ class Pong :isa(Actor::Behavior) {
     }
 
     method accept ($context, $message) {
-        if ( $message eq 'Pong' ) {
+        if ( $message->body eq 'Pong' ) {
             $count++;
             say("Got Pong($count) sending Ping");
-            $context->send( $ping, 'Ping' );
+            $ping->send( Actor::Message->new( from => $context->self, body => 'Ping' ) );
             return true;
         } else {
-            say("Unknown message: $message");
+            say("Unknown message: ".$message->body);
             return false;
         }
     }
@@ -285,22 +285,26 @@ my $system = Actor::System->new(
     address => Actor::Address->new( host => '0:3000' )
 );
 
+warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
+
 my $ping = $system->spawn_actor(
     '/ping' => Actor::Props->new( class => 'Ping' )
 );
 
-warn "Mailboxes: ",(join ', ' => $system->list_mailboxes),"\n";
+warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
 
-$system->init_ref->context->send( $ping, 'Ping' );
+$ping->send( Actor::Message->new( from => $system->init_ref, body => 'Ping' ) );
 
-$system->tick foreach 0 .. 10;
+$system->tick foreach 0 .. 9;
 
 $ping->context->exit;
 
 warn "Dead Letters:\n";
 warn map {
-    sprintf "to:(%s), from:(%s), msg:(%s)\n" => $_->[0]->address->url, $_->[1]->address->url, $_->[2]
+    sprintf "    to:(%s), from:(%s), msg:(%s)\n" => $_->[0]->address->url, $_->[1]->from->address->url, $_->[1]->body
 } $system->get_dead_letters;
+
+warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
 
 done_testing;
 

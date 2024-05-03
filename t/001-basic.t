@@ -189,13 +189,13 @@ class Actor::System {
             )
         );
 
-        $mailboxes{ $ref->address->url } = Actor::Mailbox->new( ref => $ref )->activate( $self );
+        $mailboxes{ $ref->address->path } = Actor::Mailbox->new( ref => $ref )->activate( $self );
 
         return $ref;
     }
 
     method despawn_actor ($ref) {
-        if ( my $mailbox = delete $mailboxes{ $ref->address->url } ) {
+        if ( my $mailbox = delete $mailboxes{ $ref->address->path } ) {
             $mailbox->deactivate( $self );
         }
     }

@@ -201,7 +201,7 @@ class Actor::System {
     }
 
     method deliver_message ($to, $message) {
-        if ( my $mailbox = $mailboxes{ $to->address->url } ) {
+        if ( my $mailbox = $mailboxes{ $to->address->path } ) {
             $mailbox->enqueue_message( $message );
             push @to_be_run => $mailbox;
         }

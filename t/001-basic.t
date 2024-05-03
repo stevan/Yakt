@@ -16,7 +16,8 @@ class Actor::Address {
 
     ADJUST { $path = normalize_path($path) }
 
-    method path { join '/' => @$path }
+    method host { $host                          }
+    method path { join '/' => @$path             }
     method url  { join '/' => $host, $self->path }
 
     method with_path (@p) {
@@ -39,6 +40,9 @@ class Actor::Props {
     field $class :param;
     field $args  :param = +{};
 
+    method class { $class }
+    method args  { $args  }
+
     method new_actor {
         $class->new( %$args )
     }
@@ -46,27 +50,20 @@ class Actor::Props {
 
 class Actor::Context {
     field $system :param;
-    field $ref    :param;
+    field $parent :param;
 
-    field $parent;
+    field $ref;
     field @children;
-    field $message;
 
-    method self { $ref }
+    method has_self         { !! $ref      }
+    method self             {    $ref      }
+    method assign_self ($r) {    $ref = $r }
 
     method has_parent   { !! $parent          }
     method has_children { !! scalar @children }
-    method has_message  { !! $message         }
-    method has_sender   { !! $message         }
 
-
-    method parent   { $parent        }
-    method children { @children      }
-    method message  { $message       }
-    method sender   { $message->from }
-
-    method set_message ($m) { $message = $m    }
-    method clear_message    { $message = undef }
+    method parent   { $parent   }
+    method children { @children }
 
     # ...
 
@@ -76,7 +73,7 @@ class Actor::Context {
         return $child;
     }
 
-    method send ($to, $message) {
+    method send_to ($to, $message) {
         $system->deliver_message( $to, $message );
         return;
     }
@@ -87,30 +84,28 @@ class Actor::Context {
 
 class Actor::Ref {
     field $address :param;
+    field $props   :param;
+    field $context :param;
 
-    field $context;
+    ADJUST { $context->assign_self( $self ) }
 
+    method props   { $props   }
     method address { $address }
     method context { $context }
 
-    method set_context ($ctx) { $context = $ctx  }
-    method remove_context     { $context = undef }
-
     method send ($message) {
-        $context->send( $self, $message );
+        $context->send_to( $self, $message );
         return;
     }
 }
 
 class Actor::Mailbox {
-    field $ref   :param;
-    field $props :param;
+    field $ref :param;
 
     field $behavior;
     field @messages;
 
-    method ref   { $ref   }
-    method props { $props }
+    method ref { $ref }
 
     # ...
 
@@ -118,8 +113,9 @@ class Actor::Mailbox {
     method has_messages { !! scalar @messages }
 
     method activate ($system) {
-        $behavior = $props->new_actor;
+        $behavior = $ref->props->new_actor;
         $behavior->activate( $ref->context );
+        $self;
     }
 
     method deactivate ($system) {
@@ -130,6 +126,8 @@ class Actor::Mailbox {
             $system->send_to_dead_letters( map [ $ref, $_ ], @messages );
             @messages = ();
         }
+
+        $self;
     }
 
     # ...
@@ -153,10 +151,8 @@ class Actor::Mailbox {
 
                 warn sprintf "TICK: to:(%s), from:(%s), msg:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body;
 
-                $context->set_message($message);
                 $behavior->accept( $context, $message )
                     or push @dead_letters => $message;
-                $context->clear_message;
             }
         }
 
@@ -167,39 +163,40 @@ class Actor::Mailbox {
 class Actor::System {
     field $address :param;
 
-    field $init_ref;
+    field $root;
 
     field @to_be_run;
     field %mailboxes;
     field @dead_letters;
 
     ADJUST {
-        $init_ref = $self->spawn_actor(
+        $root = $self->spawn_actor(
             $address->with_path('/-/'),
-            Actor::Props->new( class => 'Actor::Behavior' ),
-            undef
+            Actor::Props->new( class => 'Actor::Behavior' )
         );
     }
 
-    method address  { $address  }
-    method init_ref { $init_ref }
+    method address { $address }
+    method root    { $root    }
 
-    method root_context { $init_ref->context }
+    method spawn_actor ($addr, $props, $parent=undef) {
+        my $ref = Actor::Ref->new(
+            address => $addr,
+            props   => $props,
+            context => Actor::Context->new(
+                system => $self,
+                parent => $parent
+            )
+        );
 
-    method spawn_actor ($addr, $props, $parent) {
-        my $ref     = Actor::Ref->new( address => $addr );
-        my $context = Actor::Context->new( system => $self, ref => $ref, parent => $parent );
-        my $mailbox = Actor::Mailbox->new( ref => $ref, props => $props );
-        $ref->set_context( $context );
-        $mailbox->activate( $self );
-        $mailboxes{ $ref->address->url } = $mailbox;
+        $mailboxes{ $ref->address->url } = Actor::Mailbox->new( ref => $ref )->activate( $self );
+
         return $ref;
     }
 
     method despawn_actor ($ref) {
         if ( my $mailbox = delete $mailboxes{ $ref->address->url } ) {
             $mailbox->deactivate( $self );
-            $ref->remove_context;
         }
     }
 
@@ -213,7 +210,7 @@ class Actor::System {
         }
     }
 
-    method get_dead_letters { @dead_letters }
+    method get_dead_letters          {      @dead_letters       }
     method send_to_dead_letters (@m) { push @dead_letters => @m }
 
     method list_mailboxes { keys %mailboxes }
@@ -316,7 +313,7 @@ my $system = Actor::System->new(
 
 warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
 
-my $root = $system->root_context;
+my $root = $system->root->context;
 
 my $ping = $root->spawn( '/ping' => Actor::Props->new( class => 'Ping' ) );
 
@@ -324,7 +321,7 @@ warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
 
 dump_actor_heirarchy($root);
 
-$ping->send( Actor::Message->new( from => $system->init_ref, body => 'Ping' ) );
+$ping->send( Actor::Message->new( from => $system->root, body => 'Ping' ) );
 
 $system->tick foreach 0 .. 9;
 

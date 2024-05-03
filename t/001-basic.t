@@ -9,7 +9,7 @@ use Test::More;
 ## ----------------------------------------------------------------------------
 
 class Actor::Address {
-    field $host :param = '-';
+    field $host :param = '0';
     field $path :param = +[];
 
     my sub normalize_path ($p) { ref $p ? $p : [ grep $_, split '/' => $p ] }
@@ -65,15 +65,13 @@ class Actor::Context {
     method message  { $message       }
     method sender   { $message->from }
 
-    method set_parent  ($p) { $parent  = $p    }
     method set_message ($m) { $message = $m    }
     method clear_message    { $message = undef }
 
     # ...
 
     method spawn ($path, $props) {
-        my $child = $system->spawn_actor( $ref->address->with_path($path), $props );
-        $child->context->set_parent( $ref );
+        my $child = $system->spawn_actor( $ref->address->with_path($path), $props, $ref );
         push @children => $child;
         return $child;
     }
@@ -178,7 +176,8 @@ class Actor::System {
     ADJUST {
         $init_ref = $self->spawn_actor(
             $address->with_path('/-/'),
-            Actor::Props->new( class => 'Actor::Behavior' )
+            Actor::Props->new( class => 'Actor::Behavior' ),
+            undef
         );
     }
 
@@ -187,12 +186,11 @@ class Actor::System {
 
     method root_context { $init_ref->context }
 
-    method spawn_actor ($addr, $props) {
+    method spawn_actor ($addr, $props, $parent) {
         my $ref     = Actor::Ref->new( address => $addr );
+        my $context = Actor::Context->new( system => $self, ref => $ref, parent => $parent );
         my $mailbox = Actor::Mailbox->new( ref => $ref, props => $props );
-
-        $ref->set_context( Actor::Context->new( system => $self, ref => $ref ) );
-
+        $ref->set_context( $context );
         $mailbox->activate( $self );
         $mailboxes{ $ref->address->url } = $mailbox;
         return $ref;

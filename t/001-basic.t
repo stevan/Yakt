@@ -27,6 +27,14 @@ class Actor::Address {
     }
 }
 
+class Actor::Message {
+    field $from :param;
+    field $body :param;
+
+    method from { $from }
+    method body { $body }
+}
+
 class Actor::Props {
     field $class :param;
     field $args  :param = +{};
@@ -40,14 +48,34 @@ class Actor::Context {
     field $system :param;
     field $ref    :param;
 
-    field $current_message;
+    field $parent;
+    field @children;
+    field $message;
 
     method self { $ref }
 
-    method message :lvalue { $current_message }
+    method has_parent   { !! $parent          }
+    method has_children { !! scalar @children }
+    method has_message  { !! $message         }
+    method has_sender   { !! $message         }
+
+
+    method parent   { $parent        }
+    method children { @children      }
+    method message  { $message       }
+    method sender   { $message->from }
+
+    method set_parent  ($p) { $parent  = $p    }
+    method set_message ($m) { $message = $m    }
+    method clear_message    { $message = undef }
+
+    # ...
 
     method spawn ($path, $props) {
-        return $system->spawn_actor( $path, $props );
+        my $child = $system->spawn_actor( $ref->address->with_path($path), $props );
+        $child->context->set_parent( $ref );
+        push @children => $child;
+        return $child;
     }
 
     method send ($to, $message) {
@@ -92,8 +120,6 @@ class Actor::Mailbox {
     method has_messages { !! scalar @messages }
 
     method activate ($system) {
-        $ref->set_context( Actor::Context->new( system => $system, ref => $ref ) );
-
         $behavior = $props->new_actor;
         $behavior->activate( $ref->context );
     }
@@ -101,8 +127,6 @@ class Actor::Mailbox {
     method deactivate ($system) {
         $behavior->deactivate( $ref->context );
         $behavior = undef;
-
-        $ref->remove_context;
 
         if (@messages) {
             $system->send_to_dead_letters( map [ $ref, $_ ], @messages );
@@ -131,10 +155,10 @@ class Actor::Mailbox {
 
                 warn sprintf "TICK: to:(%s), from:(%s), msg:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body;
 
-                $context->message = $message;
+                $context->set_message($message);
                 $behavior->accept( $context, $message )
                     or push @dead_letters => $message;
-                $context->message = undef;
+                $context->clear_message;
             }
         }
 
@@ -152,16 +176,22 @@ class Actor::System {
     field @dead_letters;
 
     ADJUST {
-        $init_ref = $self->spawn_actor( '/', Actor::Props->new( class => 'Actor::Behavior' ) );
+        $init_ref = $self->spawn_actor(
+            $address->with_path('/-/'),
+            Actor::Props->new( class => 'Actor::Behavior' )
+        );
     }
 
     method address  { $address  }
     method init_ref { $init_ref }
 
-    method spawn_actor ($path, $props) {
-        my $root    = $init_ref ? $init_ref->address : $address;
-        my $ref     = Actor::Ref->new( address => $root->with_path( $path ) );
+    method root_context { $init_ref->context }
+
+    method spawn_actor ($addr, $props) {
+        my $ref     = Actor::Ref->new( address => $addr );
         my $mailbox = Actor::Mailbox->new( ref => $ref, props => $props );
+
+        $ref->set_context( Actor::Context->new( system => $self, ref => $ref ) );
 
         $mailbox->activate( $self );
         $mailboxes{ $ref->address->url } = $mailbox;
@@ -171,6 +201,7 @@ class Actor::System {
     method despawn_actor ($ref) {
         if ( my $mailbox = delete $mailboxes{ $ref->address->url } ) {
             $mailbox->deactivate( $self );
+            $ref->remove_context;
         }
     }
 
@@ -200,14 +231,6 @@ class Actor::System {
 
 ## ----------------------------------------------------------------------------
 
-class Actor::Message {
-    field $from :param;
-    field $body :param;
-
-    method from { $from }
-    method body { $body }
-}
-
 class Actor::Behavior {
     method activate   ($context) {}
     method deactivate ($context) {}
@@ -217,7 +240,6 @@ class Actor::Behavior {
 ## ----------------------------------------------------------------------------
 
 class Ping :isa(Actor::Behavior) {
-
     field $pong;
     field $count = 0;
 
@@ -278,6 +300,14 @@ class Pong :isa(Actor::Behavior) {
     }
 }
 
+## ----------------------------------------------------------------------------
+
+sub dump_actor_heirarchy ($ctx, $indent=0) {
+    warn(('    ' x $indent), $ctx->self->address->url, "\n");
+    foreach my $child ($ctx->children) {
+        dump_actor_heirarchy($child->context, $indent + 1);
+    }
+}
 
 ## ----------------------------------------------------------------------------
 
@@ -286,11 +316,15 @@ my $system = Actor::System->new(
     address => Actor::Address->new( host => '0:3000' )
 );
 
-warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
+warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
 
-my $ping = $system->spawn_actor( '/ping' => Actor::Props->new( class => 'Ping' ) );
+my $root = $system->root_context;
 
-warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
+my $ping = $root->spawn( '/ping' => Actor::Props->new( class => 'Ping' ) );
+
+warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
+
+dump_actor_heirarchy($root);
 
 $ping->send( Actor::Message->new( from => $system->init_ref, body => 'Ping' ) );
 
@@ -303,7 +337,7 @@ warn map {
     sprintf "    to:(%s), from:(%s), msg:(%s)\n" => $_->[0]->address->url, $_->[1]->from->address->url, $_->[1]->body
 } $system->get_dead_letters;
 
-warn "Mailboxes:\n    ",(join ', ' => $system->list_mailboxes),"\n";
+warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
 
 done_testing;
 

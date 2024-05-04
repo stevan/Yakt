@@ -127,6 +127,11 @@ class Actor::Mailbox {
 
     # ...
 
+    method restart {
+        $behavior = $ref->props->new_actor;
+        push @signals => Actor::Signal->new( type => 'restart' );
+    }
+
     method activate {
         $behavior = $ref->props->new_actor;
         push @signals => Actor::Signal->new( type => 'activate' );
@@ -251,6 +256,13 @@ class Actor::System {
         }
     }
 
+    method deliver_signal ($to, $signal) {
+        if ( my $mailbox = $mailboxes{ $to->address->path } ) {
+            $mailbox->enqueue_signal( $signal );
+            push @to_be_run => $mailbox;
+        }
+    }
+
     method get_dead_letters          {      @dead_letters       }
     method send_to_dead_letters (@m) { push @dead_letters => @m }
 
@@ -372,6 +384,8 @@ $ping->context->exit;
 
 $ping->send( Actor::Message->new( from => $system->root, body => 'Ping' ) );
 $system->tick foreach 0 .. 9;
+
+$system->deliver_signal( $ping, Actor::Signal->new( type => 'activate' ) );
 
 $ping->send( Actor::Message->new( from => $system->root, body => 'Ping' ) );
 $system->tick foreach 0 .. 9;

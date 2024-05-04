@@ -38,8 +38,10 @@ class Actor::Message {
 
 class Actor::Signal {
     field $type :param;
+    field $body :param = undef;
 
     method type { $type }
+    method body { $body }
 }
 
 class Actor::Props {
@@ -84,8 +86,17 @@ class Actor::Context {
         return;
     }
 
-    method stop ($r) { $system->despawn_actor( $r   ) }
-    method exit      { $system->despawn_actor( $ref ) }
+    method kill ($r) { $system->despawn_actor( $r ) }
+
+    method exit {
+        if ( @children ) {
+            $system->despawn_actor( $_ ) foreach @children;
+            $system->despawn_actor( $ref );
+        }
+        else {
+            $system->despawn_actor( $ref );
+        }
+    }
 }
 
 class Actor::Ref {
@@ -125,20 +136,17 @@ class Actor::Mailbox {
     method has_messages { !! scalar @messages }
     method has_signals  { !! scalar @signals  }
 
-    # ...
+    method to_be_run { @signals || @messages }
 
-    method restart {
-        $behavior = $ref->props->new_actor;
-        push @signals => Actor::Signal->new( type => 'restart' );
-    }
+    # ...
 
     method activate {
         $behavior = $ref->props->new_actor;
-        push @signals => Actor::Signal->new( type => 'activate' );
+        push @signals => Actor::Signal->new( type => 'activated' );
     }
 
     method deactivate {
-        push @signals => Actor::Signal->new( type => 'deactivate' );
+        push @signals => Actor::Signal->new( type => 'deactivated' );
     }
 
     # ...
@@ -166,13 +174,17 @@ class Actor::Mailbox {
 
                 warn sprintf "SIGNAL: to:(%s), sig:(%s)\n" => $ref->address->url, $signal->type;
 
-                if ( $signal->type eq 'activate' ) {
+                if ( $signal->type eq 'activated' ) {
                     $activated = true;
                 }
 
-                $behavior->signal( $context, $signal );
+                try {
+                    $behavior->signal( $context, $signal );
+                } catch ($e) {
+                    warn "Error handling signal(".$signal->type.") : $e";
+                }
 
-                if ( $signal->type eq 'deactivate' ) {
+                if ( $signal->type eq 'deactivated' ) {
                     push @dead_letters => @messages;
                     $behavior  = undef;
                     $activated = false;
@@ -190,10 +202,16 @@ class Actor::Mailbox {
             while (@msgs) {
                 my $message = shift @msgs;
 
-                warn sprintf "TICK: to:(%s), from:(%s), msg:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body;
+                warn sprintf "TICK: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body;
 
-                $behavior->receive( $context, $message )
-                    or push @dead_letters => $message;
+                try {
+                    $behavior->receive( $context, $message )
+                        or push @dead_letters => $message;
+                } catch ($e) {
+                    # TODO: add restart strategy here ...
+                    warn sprintf "ERROR: MSG( to:(%s), from:(%s), body:(%s) )\n" => $ref->address->url, $message->from->address->url, $message->body;
+                    push @dead_letters => $message;
+                }
             }
         }
 
@@ -206,7 +224,6 @@ class Actor::System {
 
     field $root;
 
-    field @to_be_run;
     field %mailboxes;
     field @dead_letters;
 
@@ -232,7 +249,6 @@ class Actor::System {
 
         my $mailbox = Actor::Mailbox->new( ref => $ref );
         $mailbox->activate;
-        push @to_be_run => $mailbox;
 
         $mailboxes{ $ref->address->path } = $mailbox;
 
@@ -240,16 +256,14 @@ class Actor::System {
     }
 
     method despawn_actor ($ref) {
-        if ( my $mailbox = delete $mailboxes{ $ref->address->path } ) {
+        if ( my $mailbox = $mailboxes{ $ref->address->path } ) {
             $mailbox->deactivate;
-            push @to_be_run => $mailbox;
         }
     }
 
     method deliver_message ($to, $message) {
         if ( my $mailbox = $mailboxes{ $to->address->path } ) {
             $mailbox->enqueue_message( $message );
-            push @to_be_run => $mailbox;
         }
         else {
             push @dead_letters => [ $to, $message ];
@@ -259,7 +273,6 @@ class Actor::System {
     method deliver_signal ($to, $signal) {
         if ( my $mailbox = $mailboxes{ $to->address->path } ) {
             $mailbox->enqueue_signal( $signal );
-            push @to_be_run => $mailbox;
         }
     }
 
@@ -269,10 +282,13 @@ class Actor::System {
     method list_mailboxes { keys %mailboxes }
 
     method tick {
-        if (@to_be_run) {
-            my @to_run = @to_be_run;
-            @to_be_run = ();
-            push @dead_letters => map $_->tick, @to_run;
+        my @to_run = grep $_->to_be_run, values %mailboxes;
+
+        foreach my $mailbox ( @to_run ) {
+            push @dead_letters => $mailbox->tick;
+
+            delete $mailboxes{ $mailbox->ref->address->path }
+                if $mailbox->is_deactivated;
         }
     }
 }
@@ -292,8 +308,8 @@ class Ping :isa(Actor::Behavior) {
     field $count = 0;
 
     method signal ($context, $signal) {
-        if ( $signal->type eq 'activate' ) {
-            say('Activing Ping and creating Pong');
+        if ( $signal->type eq 'activated' ) {
+            say('Ping is activated, creating Pong ...');
             $pong = $context->spawn(
                 '/pong',
                 Actor::Props->new(
@@ -302,9 +318,8 @@ class Ping :isa(Actor::Behavior) {
                 )
             );
         }
-        elsif ( $signal->type eq 'deactivate' ) {
-            say('Deactiving Ping and stopping Pong');
-            $context->stop( $pong );
+        elsif ( $signal->type eq 'deactivated' ) {
+            say('Ping is deactivated and Pong will also be');
         }
     }
 
@@ -327,11 +342,11 @@ class Pong :isa(Actor::Behavior) {
     field $count = 0;
 
     method signal ($context, $signal) {
-        if ( $signal->type eq 'activate' ) {
-            say('Activing Pong');
+        if ( $signal->type eq 'activated' ) {
+            say('Pong is Activated');
         }
-        elsif ( $signal->type eq 'deactivate' ) {
-            say('Deactiving Pong');
+        elsif ( $signal->type eq 'deactivated' ) {
+            say('Pong is Deactivated');
         }
     }
 
@@ -350,15 +365,6 @@ class Pong :isa(Actor::Behavior) {
 
 ## ----------------------------------------------------------------------------
 
-sub dump_actor_heirarchy ($ctx, $indent=0) {
-    warn(('    ' x $indent), $ctx->self->address->url, "\n");
-    foreach my $child ($ctx->children) {
-        dump_actor_heirarchy($child->context, $indent + 1);
-    }
-}
-
-## ----------------------------------------------------------------------------
-
 
 my $system = Actor::System->new(
     address => Actor::Address->new( host => '0:3000' )
@@ -372,20 +378,18 @@ my $ping = $root->spawn( '/ping' => Actor::Props->new( class => 'Ping' ) );
 
 warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
 
-dump_actor_heirarchy($root);
-
 $ping->send( Actor::Message->new( from => $system->root, body => 'Ping' ) );
 
 $system->tick foreach 0 .. 9;
 
 $ping->context->exit;
 
+$system->tick foreach 0 .. 9;
+
 # these both end up in dead-letters ...
 
 $ping->send( Actor::Message->new( from => $system->root, body => 'Ping' ) );
 $system->tick foreach 0 .. 9;
-
-$system->deliver_signal( $ping, Actor::Signal->new( type => 'activate' ) );
 
 $ping->send( Actor::Message->new( from => $system->root, body => 'Ping' ) );
 $system->tick foreach 0 .. 9;

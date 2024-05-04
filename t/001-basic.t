@@ -108,6 +108,8 @@ class Actor::Ref {
 class Actor::Mailbox {
     field $ref :param;
 
+    field $activated = false;
+
     field $behavior;
     field @messages;
     field @signals;
@@ -116,7 +118,10 @@ class Actor::Mailbox {
 
     # ...
 
-    method is_active    { !! $behavior }
+    method is_activated   {   $activated }
+    method is_deactivated { ! $activated }
+
+
     method has_messages { !! scalar @messages }
     method has_signals  { !! scalar @signals  }
 
@@ -156,11 +161,16 @@ class Actor::Mailbox {
 
                 warn sprintf "SIGNAL: to:(%s), sig:(%s)\n" => $ref->address->url, $signal->type;
 
+                if ( $signal->type eq 'activate' ) {
+                    $activated = true;
+                }
+
                 $behavior->signal( $context, $signal );
 
                 if ( $signal->type eq 'deactivate' ) {
                     push @dead_letters => @messages;
-                    $behavior = undef;
+                    $behavior  = undef;
+                    $activated = false;
                     @messages = ();
                     last;
                 }

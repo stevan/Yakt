@@ -86,8 +86,6 @@ class Actor::Context {
         return;
     }
 
-    method kill ($r) { $system->despawn_actor( $r ) }
-
     method exit {
         if ( @children ) {
             $system->despawn_actor( $_ ) foreach @children;
@@ -155,9 +153,9 @@ class Actor::Mailbox {
         push @messages => $message;
     }
 
-    method enqueue_signal ( $signal ) {
-        push @signals => $signal;
-    }
+    #method enqueue_signal ( $signal ) {
+    #    push @signals => $signal;
+    #}
 
     # ...
 
@@ -270,11 +268,11 @@ class Actor::System {
         }
     }
 
-    method deliver_signal ($to, $signal) {
-        if ( my $mailbox = $mailboxes{ $to->address->path } ) {
-            $mailbox->enqueue_signal( $signal );
-        }
-    }
+    #method deliver_signal ($to, $signal) {
+    #    if ( my $mailbox = $mailboxes{ $to->address->path } ) {
+    #        $mailbox->enqueue_signal( $signal );
+    #    }
+    #}
 
     method get_dead_letters          {      @dead_letters       }
     method send_to_dead_letters (@m) { push @dead_letters => @m }

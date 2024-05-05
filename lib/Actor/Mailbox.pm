@@ -4,7 +4,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-use Actor::Signal;
+use Actor::Signals;
 use Actor::Message;
 
 class Actor::Mailbox {
@@ -33,11 +33,11 @@ class Actor::Mailbox {
 
     method activate {
         $behavior = $ref->props->new_actor;
-        push @signals => Actor::Signal->new( type => 'activated' );
+        push @signals => Actor::Signals->ACTIVATED;
     }
 
     method deactivate {
-        push @signals => Actor::Signal->new( type => 'deactivated' );
+        push @signals => Actor::Signals->DEACTIVATED;
     }
 
     # ...
@@ -63,9 +63,9 @@ class Actor::Mailbox {
             while (@sigs) {
                 my $signal = shift @sigs;
 
-                warn sprintf "SIGNAL: to:(%s), sig:(%s)\n" => $ref->address->url, $signal->type;
+                warn sprintf "SIGNAL: to:(%s), sig:(%s)\n" => $ref->address->url, blessed $signal;
 
-                if ( $signal->type eq 'activated' ) {
+                if ( $signal isa Actor::Signals::Activated ) {
                     $activated = true;
                 }
 
@@ -75,7 +75,7 @@ class Actor::Mailbox {
                     warn "Error handling signal(".$signal->type.") : $e";
                 }
 
-                if ( $signal->type eq 'deactivated' ) {
+                if ( $signal isa Actor::Signals::Deactivated ) {
                     push @dead_letters => @messages;
                     $behavior  = undef;
                     $activated = false;

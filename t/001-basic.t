@@ -12,7 +12,7 @@ class Ping :isa(Actor::Behavior) {
     field $count = 0;
 
     method signal ($context, $signal) {
-        if ( $signal isa Actor::Signals::Activated ) {
+        if ( $signal isa Actor::Signals::Lifecycle::Activated ) {
             say('Ping is activated, creating Pong ...');
             $pong = $context->spawn(
                 '/pong',
@@ -22,7 +22,7 @@ class Ping :isa(Actor::Behavior) {
                 )
             );
         }
-        elsif ( $signal isa Actor::Signals::Deactivated ) {
+        elsif ( $signal isa Actor::Signals::Lifecycle::Deactivated ) {
             say('Ping is deactivated and Pong will also be');
         }
     }
@@ -46,10 +46,10 @@ class Pong :isa(Actor::Behavior) {
     field $count = 0;
 
     method signal ($context, $signal) {
-        if ( $signal isa Actor::Signals::Activated ) {
+        if ( $signal isa Actor::Signals::Lifecycle::Activated ) {
             say('Pong is Activated');
         }
-        elsif ( $signal isa Actor::Signals::Deactivated ) {
+        elsif ( $signal isa Actor::Signals::Lifecycle::Deactivated ) {
             say('Pong is Deactivated');
         }
     }

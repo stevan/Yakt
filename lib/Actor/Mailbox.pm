@@ -4,7 +4,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-use Actor::Signals;
+use Actor::Signals::Lifecycle;
 use Actor::Message;
 
 class Actor::Mailbox {
@@ -32,11 +32,11 @@ class Actor::Mailbox {
 
     method activate {
         $behavior = $ref->props->new_actor;
-        push @signals => Actor::Signals->ACTIVATED;
+        push @signals => Actor::Signals::Lifecycle->ACTIVATED;
     }
 
     method deactivate {
-        push @signals => Actor::Signals->DEACTIVATED;
+        push @signals => Actor::Signals::Lifecycle->DEACTIVATED;
     }
 
     # ...
@@ -64,7 +64,10 @@ class Actor::Mailbox {
 
                 warn sprintf "SIGNAL: to:(%s), sig:(%s)\n" => $ref->address->url, blessed $signal;
 
-                if ( $signal isa Actor::Signals::Activated ) {
+                if ( $signal isa Actor::Signals::Lifecycle::Activated ) {
+                    die "Activated signal sent to already activated actor, this is not okay"
+                        if $activated;
+
                     $activated = true;
                 }
 
@@ -74,7 +77,7 @@ class Actor::Mailbox {
                     warn "Error handling signal(".$signal->type.") : $e";
                 }
 
-                if ( $signal isa Actor::Signals::Deactivated ) {
+                if ( $signal isa Actor::Signals::Lifecycle::Deactivated ) {
                     push @dead_letters => @messages;
                     $behavior  = undef;
                     $activated = false;
@@ -98,7 +101,7 @@ class Actor::Mailbox {
                     $behavior->receive( $context, $message )
                         or push @dead_letters => $message;
                 } catch ($e) {
-                    warn sprintf "ERROR: MSG( to:(%s), from:(%s), body:(%s) )\n" => $ref->address->url, $message->from->address->url, $message->body;
+                    warn sprintf "ERROR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" => $e, $ref->address->url, $message->from->address->url, $message->body;
                     push @dead_letters => $message;
                 }
             }

@@ -95,13 +95,13 @@ class Actor::Mailbox {
             while (@msgs) {
                 my $message = shift @msgs;
 
-                warn sprintf "TICK: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body;
+                warn sprintf "TICK: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body // blessed $message;
 
                 try {
                     $behavior->receive( $context, $message )
                         or push @dead_letters => $message;
                 } catch ($e) {
-                    warn sprintf "ERROR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" => $e, $ref->address->url, $message->from->address->url, $message->body;
+                    warn sprintf "ERROR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" => $e, $ref->address->url, $message->from->address->url, $message->body // blessed $message;
                     push @dead_letters => $message;
                 }
             }

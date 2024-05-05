@@ -6,5 +6,5 @@ use builtin      qw[ blessed refaddr true false ];
 
 class Actor::Behavior {
     method receive ($context, $message) {}
-    method signal  ($context, $signal ) {}
+    method signal  ($context,  $signal) {}
 }

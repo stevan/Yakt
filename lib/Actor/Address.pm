@@ -5,7 +5,7 @@ use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
 class Actor::Address {
-    field $host :param = '0';
+    field $host :param = '0.0.0.0';
     field $path :param = +[];
 
     my sub normalize_path ($p) { ref $p ? $p : [ grep $_, split '/' => $p ] }

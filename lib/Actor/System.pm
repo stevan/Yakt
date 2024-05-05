@@ -28,6 +28,8 @@ class Actor::System {
     method address { $address }
     method root    { $root    }
 
+    # ...
+
     method spawn_actor ($addr, $props, $parent=undef) {
         my $ref = Actor::Ref->new(
             address => $addr,
@@ -52,6 +54,8 @@ class Actor::System {
         }
     }
 
+    # ...
+
     method deliver_message ($to, $message) {
         if ( my $mailbox = $mailboxes{ $to->address->path } ) {
             $mailbox->enqueue_message( $message );
@@ -61,16 +65,20 @@ class Actor::System {
         }
     }
 
-    #method deliver_signal ($to, $signal) {
-    #    if ( my $mailbox = $mailboxes{ $to->address->path } ) {
-    #        $mailbox->enqueue_signal( $signal );
-    #    }
-    #}
+    method deliver_signal ($to, $signal) {
+        if ( my $mailbox = $mailboxes{ $to->address->path } ) {
+            $mailbox->enqueue_signal( $signal );
+        }
+    }
+
+    # ...
 
     method get_dead_letters          {      @dead_letters       }
     method send_to_dead_letters (@m) { push @dead_letters => @m }
 
     method list_mailboxes { keys %mailboxes }
+
+    # ...
 
     method tick {
         my @to_run = grep $_->to_be_run, values %mailboxes;

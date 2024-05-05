@@ -23,11 +23,10 @@ class Actor::Mailbox {
     method is_activated   {   $activated }
     method is_deactivated { ! $activated }
 
-
     method has_messages { !! scalar @messages }
     method has_signals  { !! scalar @signals  }
 
-    method to_be_run { @signals || @messages }
+    method to_be_run { @signals || ($activated && @messages) }
 
     # ...
 
@@ -46,9 +45,9 @@ class Actor::Mailbox {
         push @messages => $message;
     }
 
-    #method enqueue_signal ( $signal ) {
-    #    push @signals => $signal;
-    #}
+    method enqueue_signal ( $signal ) {
+        push @signals => $signal;
+    }
 
     # ...
 
@@ -99,7 +98,6 @@ class Actor::Mailbox {
                     $behavior->receive( $context, $message )
                         or push @dead_letters => $message;
                 } catch ($e) {
-                    # TODO: add restart strategy here ...
                     warn sprintf "ERROR: MSG( to:(%s), from:(%s), body:(%s) )\n" => $ref->address->url, $message->from->address->url, $message->body;
                     push @dead_letters => $message;
                 }

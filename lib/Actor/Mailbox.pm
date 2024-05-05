@@ -5,6 +5,7 @@ use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
 use Actor::Signal;
+use Actor::Message;
 
 class Actor::Mailbox {
     field $ref :param;

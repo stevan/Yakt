@@ -8,6 +8,7 @@ use Actor::Props;
 use Actor::Ref;
 use Actor::Context;
 use Actor::Mailbox;
+use Actor::Address;
 
 class Actor::System {
     field $address :param;

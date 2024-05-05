@@ -7,7 +7,6 @@ use builtin      qw[ blessed refaddr true false ];
 use Test::More;
 use Actor;
 
-
 class Ping :isa(Actor::Behavior) {
     field $pong;
     field $count = 0;

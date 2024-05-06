@@ -89,7 +89,7 @@ class Pong :isa(Actor::Behavior) {
 
 
 my $system = Actor::System->new(
-    address => Actor::Address->new( host => '0:3000' )
+    address => Actor::Address->new
 );
 
 warn "Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";

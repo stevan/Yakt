@@ -34,7 +34,7 @@ class Actor::Context {
         return;
     }
 
-    method exit {
+    method stop {
         if ( @children ) {
             $system->despawn_actor( $_ ) foreach @children;
             $system->despawn_actor( $ref );

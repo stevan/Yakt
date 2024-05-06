@@ -25,6 +25,9 @@ class Ping :isa(Actor::Behavior) {
                 )
             );
         }
+        elsif ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
+            say('Ping is Stopping');
+        }
         elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
             say('Ping is deactivated and Pong will also be');
         }
@@ -51,6 +54,9 @@ class Pong :isa(Actor::Behavior) {
     method signal ($context, $signal) {
         if ( $signal isa Actor::Signals::Lifecycle::Started ) {
             say('Pong is Activated');
+        }
+        elsif ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
+            say('Pong is Stopping');
         }
         elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
             say('Pong is Deactivated');
@@ -89,7 +95,7 @@ $ping->send( PingPong::Ping->new );
 
 $system->tick foreach 0 .. 9;
 
-$ping->context->exit;
+$ping->context->stop;
 
 $system->tick foreach 0 .. 9;
 
@@ -112,7 +118,7 @@ if ( my @dead_letters = $system->get_dead_letters ) {
     } @dead_letters;
 }
 
-warn "Active Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
+warn "Active Mailboxes:  \n    ",(join ', ' => sort $system->list_active_mailboxes  ),"\n";
 warn "Inactive Mailboxes:\n    ",(join ', ' => sort $system->list_inactive_mailboxes),"\n";
 
 done_testing;

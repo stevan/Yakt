@@ -28,6 +28,9 @@ class Ping :isa(Actor::Behavior) {
         elsif ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
             say('Ping is Stopping');
         }
+        elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
+            say('Ping is Restarting');
+        }
         elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
             say('Ping is deactivated and Pong will also be');
         }
@@ -38,6 +41,9 @@ class Ping :isa(Actor::Behavior) {
             $count++;
             say("Got Ping($count) sending Pong");
             $pong->send( PingPong::Pong->new );
+            if ($count > 9) {
+                $context->stop;
+            }
             return true;
         } else {
             say("Unknown message: $message");
@@ -57,6 +63,9 @@ class Pong :isa(Actor::Behavior) {
         }
         elsif ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
             say('Pong is Stopping');
+        }
+        elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
+            say('Pong is Restarting');
         }
         elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
             say('Pong is Deactivated');
@@ -86,26 +95,13 @@ my $system = Actor::System->new(
 warn "Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
 
 my $root = $system->root->context;
-
 my $ping = $root->spawn( '/ping' => Actor::Props->new( class => 'Ping' ) );
 
 warn "Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
 
 $ping->send( PingPong::Ping->new );
 
-$system->tick foreach 0 .. 9;
-
-$ping->context->stop;
-
-$system->tick foreach 0 .. 9;
-
-# these both end up in dead-letters ...
-
-$ping->send( PingPong::Ping->new );
-$system->tick foreach 0 .. 9;
-
-$ping->send( PingPong::Ping->new );
-$system->tick foreach 0 .. 9;
+$system->loop_until_done;
 
 if ( my @dead_letters = $system->get_dead_letters ) {
     warn "Dead Letters:\n";

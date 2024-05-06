@@ -87,6 +87,8 @@ class Actor::System {
         warn "-- tick ------------------------------------------------------------\n";
         my @to_run = grep $_->to_be_run, values %active;
 
+        return false unless @to_run;
+
         foreach my $mailbox ( @to_run ) {
             push @dead_letters => $mailbox->tick;
 
@@ -94,5 +96,15 @@ class Actor::System {
                 = delete $active{ $mailbox->ref->address->path }
                     if $mailbox->is_deactivated;
         }
+
+        return true;
+    }
+
+    method loop_until_done {
+        1 while $self->tick;
     }
 }
+
+
+
+

@@ -3,17 +3,25 @@
 
 ```ruby
 
+class PingPong::Start :isa(Actor::Message) {}
+class PingPong::Ping  :isa(Actor::Message) {}
+class PingPong::Pong  :isa(Actor::Message) {}
+
 class PingPong :isa(Actor::Protocol) {
-    method Count :Message( Int );
+    method Start ($max_ping) { PingPong::Start->new( body => $max_ming ) }
 
-    method Start :Command( Int );
-    method Ping  :Command;
-    method Pong  :Command;
-
-    method GetCount :Query :Result( Count );
+    method Ping { PingPong::Ping->new }
+    method Pong { PingPong::Pong->new }
 }
 
-class Ping :isa(Actor) :implements(PingPong) {
+class PingPong :isa(Actor::Protocol) {
+    method Start :Message(Int);
+    method Ping  :Message;
+    method Pong  :Message;
+}
+
+class Ping :isa(Actor) {
+    use Actor::Protocols PingPong => qw[ Start Ping Pong ];
 
     field $pong;
 
@@ -24,31 +32,25 @@ class Ping :isa(Actor) :implements(PingPong) {
         $pong = spawn '/pong' => Props[ Pong => { ping => $self } ];
     }
 
-    method OnDeactivation :Signal(Lifecycle::Deactivate) {
-        $pong <- signal *Lifecycle::Deactivate;
-    }
-
-    method Start :Recieve(PingPong::Start) ($max_count) {
-        $max = $max_count;
-        $pong <- event *PingPong::Pong;
+    method Start :Recieve(PingPong::Start) ($m) {
+        $max = $max_ping;
+        $pong->send(Pong);
     }
 
     method Ping :Receive(PingPong::Ping) {
         if ($count < $max) {
-            context->stop;
+            context->exit;
             return;
         }
         $count++;
         say "Got Ping($count) sending Pong";
-        $pong <- event *PingPong::Pong;
-    }
-
-    method Count :Receive(PingPong::GetCount) :Respond(PingPong::Count) {
-        sender <- event *PingPong::Count => $count;
+        $pong->send(Pong);
     }
 }
 
 class Pong :isa(Actor) {
+    use Actor::Protocols PingPong => qw[ Ping Pong ];
+
     field $ping :param;
 
     field $count = 0;
@@ -56,7 +58,7 @@ class Pong :isa(Actor) {
     method Pong :Receive(PingPong::Pong) {
         $count++;
         say "Got Pong($count) sending Ping";
-        $ping <- event *PingPong::Ping;
+        $ping->send(Ping);
     }
 }
 ```

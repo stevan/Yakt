@@ -34,7 +34,7 @@ class Ping :isa(Actor::Behavior) {
         if ( $message isa PingPong::Ping ) {
             $count++;
             say("Got Ping($count) sending Pong");
-            $pong->send( PingPong::Pong->new( from => $context->self ) );
+            $pong->send( PingPong::Pong->new );
             return true;
         } else {
             say("Unknown message: $message");
@@ -61,7 +61,7 @@ class Pong :isa(Actor::Behavior) {
         if ( $message isa PingPong::Pong ) {
             $count++;
             say("Got Pong($count) sending Ping");
-            $ping->send( PingPong::Ping->new( from => $context->self ) );
+            $ping->send( PingPong::Ping->new );
             return true;
         } else {
             say("Unknown message: $message");
@@ -85,7 +85,7 @@ my $ping = $root->spawn( '/ping' => Actor::Props->new( class => 'Ping' ) );
 
 warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
 
-$ping->send( PingPong::Ping->new( from => $system->root ) );
+$ping->send( PingPong::Ping->new );
 
 $system->tick foreach 0 .. 9;
 
@@ -95,10 +95,10 @@ $system->tick foreach 0 .. 9;
 
 # these both end up in dead-letters ...
 
-$ping->send( PingPong::Ping->new( from => $system->root ) );
+$ping->send( PingPong::Ping->new );
 $system->tick foreach 0 .. 9;
 
-$ping->send( PingPong::Ping->new( from => $system->root ) );
+$ping->send( PingPong::Ping->new );
 $system->tick foreach 0 .. 9;
 
 if ( my @dead_letters = $system->get_dead_letters ) {
@@ -106,7 +106,7 @@ if ( my @dead_letters = $system->get_dead_letters ) {
     warn map {
         sprintf "    to:(%s), from:(%s), msg:(%s)\n" => (
             $_->[0]->address->url,
-            $_->[1]->from->address->url,
+            $_->[1]->from ? $_->[1]->from->address->url : '~',
             $_->[1]->body // blessed $_->[1]
         )
     } @dead_letters;

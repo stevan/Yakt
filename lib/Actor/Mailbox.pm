@@ -95,7 +95,7 @@ class Actor::Mailbox {
             while (@msgs) {
                 my $message = shift @msgs;
 
-                warn sprintf "TICK: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from->address->url, $message->body // blessed $message;
+                warn sprintf "TICK: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from ? $message->from->address->url : '~', $message->body // blessed $message;
 
                 try {
                     $behavior->receive( $context, $message )

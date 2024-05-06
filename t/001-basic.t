@@ -15,7 +15,7 @@ class Ping :isa(Actor::Behavior) {
     field $count = 0;
 
     method signal ($context, $signal) {
-        if ( $signal isa Actor::Signals::Lifecycle::Activated ) {
+        if ( $signal isa Actor::Signals::Lifecycle::Started ) {
             say('Ping is activated, creating Pong ...');
             $pong = $context->spawn(
                 '/pong',
@@ -25,7 +25,7 @@ class Ping :isa(Actor::Behavior) {
                 )
             );
         }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Deactivated ) {
+        elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
             say('Ping is deactivated and Pong will also be');
         }
     }
@@ -49,10 +49,10 @@ class Pong :isa(Actor::Behavior) {
     field $count = 0;
 
     method signal ($context, $signal) {
-        if ( $signal isa Actor::Signals::Lifecycle::Activated ) {
+        if ( $signal isa Actor::Signals::Lifecycle::Started ) {
             say('Pong is Activated');
         }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Deactivated ) {
+        elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
             say('Pong is Deactivated');
         }
     }
@@ -77,13 +77,13 @@ my $system = Actor::System->new(
     address => Actor::Address->new( host => '0:3000' )
 );
 
-warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
+warn "Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
 
 my $root = $system->root->context;
 
 my $ping = $root->spawn( '/ping' => Actor::Props->new( class => 'Ping' ) );
 
-warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
+warn "Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
 
 $ping->send( PingPong::Ping->new );
 
@@ -112,7 +112,8 @@ if ( my @dead_letters = $system->get_dead_letters ) {
     } @dead_letters;
 }
 
-warn "Mailboxes:\n    ",(join ', ' => sort $system->list_mailboxes),"\n";
+warn "Active Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
+warn "Inactive Mailboxes:\n    ",(join ', ' => sort $system->list_inactive_mailboxes),"\n";
 
 done_testing;
 

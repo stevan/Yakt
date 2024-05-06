@@ -10,24 +10,29 @@ use Actor::Signal;
 # Lifecycle Signals
 # -------------------------------------------------------------------
 #
-# - Activated
+# - Started
+#     - the actor has been activated, this will be the first signal
+#       that it receives
 #
-# This is a signal that is passed to the object *after* it has
-# been activated. This event is sent internally and should never
-# be sent by the user.
+# - Stopping
+#     - the actor is being shut down, and is about to be stopped
 #
-# - Deactivated
+# - Restarting
+#     - the actor is being shut down, and is about to be restarted
 #
-# This is a signal that is passed to the object *before* it will
-# be deactivated. This event is sent internally and should never
-# be sent by the user.
+# - Stopped
+#     - the actor has been shut down and will be removed
 #
 # -------------------------------------------------------------------
 
-class Actor::Signals::Lifecycle::Activated   :isa(Actor::Signal) {}
-class Actor::Signals::Lifecycle::Deactivated :isa(Actor::Signal) {}
+class Actor::Signals::Lifecycle::Started    :isa(Actor::Signal) {}
+class Actor::Signals::Lifecycle::Stopping   :isa(Actor::Signal) {}
+class Actor::Signals::Lifecycle::Restarting :isa(Actor::Signal) {}
+class Actor::Signals::Lifecycle::Stopped    :isa(Actor::Signal) {}
 
 class Actor::Signals::Lifecycle {
-    use constant ACTIVATED   => Actor::Signals::Lifecycle::Activated->new;
-    use constant DEACTIVATED => Actor::Signals::Lifecycle::Deactivated->new;
+    use constant STARTED    => Actor::Signals::Lifecycle::Started->new;
+    use constant STOPPING   => Actor::Signals::Lifecycle::Stopping->new;
+    use constant RESTARTING => Actor::Signals::Lifecycle::Restarting->new;
+    use constant STOPPED    => Actor::Signals::Lifecycle::Stopped->new;
 }

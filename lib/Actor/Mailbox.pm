@@ -26,17 +26,25 @@ class Actor::Mailbox {
     method has_messages { !! scalar @messages }
     method has_signals  { !! scalar @signals  }
 
-    method to_be_run { @signals || ($activated && @messages) }
+    method to_be_run { !! (@signals || ($activated && @messages)) }
 
     # ...
 
     method activate {
         $behavior = $ref->props->new_actor;
-        push @signals => Actor::Signals::Lifecycle->ACTIVATED;
+        push @signals => Actor::Signals::Lifecycle->STARTED;
+    }
+
+    method stop {
+        push @signals => Actor::Signals::Lifecycle->STOPPING;
+    }
+
+    method restart {
+        push @signals => Actor::Signals::Lifecycle->RESTARTING;
     }
 
     method deactivate {
-        push @signals => Actor::Signals::Lifecycle->DEACTIVATED;
+        push @signals => Actor::Signals::Lifecycle->STOPPED;
     }
 
     # ...
@@ -62,9 +70,15 @@ class Actor::Mailbox {
             while (@sigs) {
                 my $signal = shift @sigs;
 
-                warn sprintf "SIGNAL: to:(%s), sig:(%s)\n" => $ref->address->url, blessed $signal;
+                warn sprintf "> SIG: to:(%s), sig:(%s)\n" => $ref->address->url, blessed $signal;
 
-                if ( $signal isa Actor::Signals::Lifecycle::Activated ) {
+                ## ----------------------------------------------------
+                ## Started
+                ## ----------------------------------------------------
+                # Before we process this signal, the mailbox has
+                # not been activated, and we want it to be active
+                # by the time it processes this, so we set it here
+                if ( $signal isa Actor::Signals::Lifecycle::Started ) {
                     die "Activated signal sent to already activated actor, this is not okay"
                         if $activated;
 
@@ -77,7 +91,42 @@ class Actor::Mailbox {
                     warn "Error handling signal(".$signal->type.") : $e";
                 }
 
-                if ( $signal isa Actor::Signals::Lifecycle::Deactivated ) {
+                ## ----------------------------------------------------
+                ## Stopping
+                ## ----------------------------------------------------
+                # if we have just processed a Stopping signal, that
+                # means we are now ready to stop, so we just add
+                # that signal to be the first one processed on the
+                # next loop and explicitly NOT on the next tick,
+                # or after other signals, ... as we do not want this
+                # actor to process any further messages, and the very
+                # next thing it should do is stop
+                if ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
+                    unshift @sigs => Actor::Signals::Lifecycle->STOPPED;
+                }
+                ## ----------------------------------------------------
+                ## Restarting
+                ## ----------------------------------------------------
+                # if we have just processed a Restarting signal
+                # then we are prepared for a restart, and can
+                # do that below
+                elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
+                    # recreate the actor ...
+                    $behavior = $ref->props->new_actor;
+                    # and make sure the Started signal is the very next
+                    # thing we process here so that any initialization
+                    # needed can be done
+                    unshift @sigs => Actor::Signals::Lifecycle->STARTED;
+                }
+                ## ----------------------------------------------------
+                ## Stopped
+                ## ----------------------------------------------------
+                # if we have encountered a Stopped signal, that is
+                # our queue to destruct the actor and deactive the
+                # mailbox. We also remove all the messages and return
+                # them to the deadletter queue, just before exiting
+                # this loop.
+                elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
                     push @dead_letters => @messages;
                     $behavior  = undef;
                     $activated = false;
@@ -95,13 +144,13 @@ class Actor::Mailbox {
             while (@msgs) {
                 my $message = shift @msgs;
 
-                warn sprintf "TICK: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from ? $message->from->address->url : '~', $message->body // blessed $message;
+                warn sprintf "> MSG: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from ? $message->from->address->url : '~', $message->body // blessed $message;
 
                 try {
                     $behavior->receive( $context, $message )
                         or push @dead_letters => $message;
                 } catch ($e) {
-                    warn sprintf "ERROR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" => $e, $ref->address->url, $message->from->address->url, $message->body // blessed $message;
+                    warn sprintf "! ERR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" => $e, $ref->address->url, $message->from->address->url, $message->body // blessed $message;
                     push @dead_letters => $message;
                 }
             }

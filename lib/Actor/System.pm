@@ -15,7 +15,9 @@ class Actor::System {
 
     field $root;
 
-    field %mailboxes;
+    field %active;
+    field %inactive;
+
     field @dead_letters;
 
     ADJUST {
@@ -43,21 +45,21 @@ class Actor::System {
         my $mailbox = Actor::Mailbox->new( ref => $ref );
         $mailbox->activate;
 
-        $mailboxes{ $ref->address->path } = $mailbox;
+        $active{ $ref->address->path } = $mailbox;
 
         return $ref;
     }
 
     method despawn_actor ($ref) {
-        if ( my $mailbox = $mailboxes{ $ref->address->path } ) {
-            $mailbox->deactivate;
+        if ( my $mailbox = $active{ $ref->address->path } ) {
+            $mailbox->stop;
         }
     }
 
     # ...
 
     method deliver_message ($to, $message) {
-        if ( my $mailbox = $mailboxes{ $to->address->path } ) {
+        if ( my $mailbox = $active{ $to->address->path } ) {
             $mailbox->enqueue_message( $message );
         }
         else {
@@ -66,7 +68,7 @@ class Actor::System {
     }
 
     method deliver_signal ($to, $signal) {
-        if ( my $mailbox = $mailboxes{ $to->address->path } ) {
+        if ( my $mailbox = $active{ $to->address->path } ) {
             $mailbox->enqueue_signal( $signal );
         }
     }
@@ -76,18 +78,21 @@ class Actor::System {
     method get_dead_letters          {      @dead_letters       }
     method send_to_dead_letters (@m) { push @dead_letters => @m }
 
-    method list_mailboxes { keys %mailboxes }
+    method list_active_mailboxes   { keys %active   }
+    method list_inactive_mailboxes { keys %inactive }
 
     # ...
 
     method tick {
-        my @to_run = grep $_->to_be_run, values %mailboxes;
+        warn "-- tick ------------------------------------------------------------\n";
+        my @to_run = grep $_->to_be_run, values %active;
 
         foreach my $mailbox ( @to_run ) {
             push @dead_letters => $mailbox->tick;
 
-            delete $mailboxes{ $mailbox->ref->address->path }
-                if $mailbox->is_deactivated;
+            $inactive{ $mailbox->ref->address->path }
+                = delete $active{ $mailbox->ref->address->path }
+                    if $mailbox->is_deactivated;
         }
     }
 }

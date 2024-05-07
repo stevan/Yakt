@@ -16,10 +16,15 @@ class Pong {
 
     my $BEHAVIOR //= Actor::Behavior->new(
         receivers => {
-            PingPong::Pong:: => method ($, $) {
+            PingPong::Pong:: => method ($context, $) {
                 $count++;
                 say("Got Pong($count) sending Ping");
                 $ping->send( PingPong::Ping->new );
+                if ($count >= 3) {
+                    say "!!! Sending Restart to Pong";
+                    #$context->self->send( PingPong::Pong->new ) foreach 0 .. 10;
+                    $context->system->lookup_mailbox( $context->self->address )->restart;
+                }
             }
         },
         signals => {
@@ -51,7 +56,7 @@ class Ping {
                 $count++;
                 say("Got Ping($count) sending Pong");
                 $pong->send( PingPong::Pong->new );
-                if ($count > 9) {
+                if ($count >= 9) {
                     $context->stop;
                 }
             }

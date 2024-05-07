@@ -11,6 +11,8 @@ class Actor::Context {
     field $ref;
     field @children;
 
+    method system { $system }
+
     method has_self         { !! $ref      }
     method self             {    $ref      }
     method assign_self ($r) {    $ref = $r }

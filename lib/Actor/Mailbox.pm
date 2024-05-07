@@ -4,7 +4,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-use Actor::Signals::Lifecycle;
+use Actor::Signals;
 use Actor::Message;
 
 class Actor::Mailbox {
@@ -17,7 +17,10 @@ class Actor::Mailbox {
     field $behavior;
     field $actor;
 
+    field $queue;
     field @messages;
+    field @buffer;
+
     field @signals;
 
     ADJUST {
@@ -25,6 +28,7 @@ class Actor::Mailbox {
         $behavior = $props->behavior_for_actor;
         $actor    = $props->new_actor;
         $ref      = Actor::Ref->new( address => $address, context => $context );
+        $queue    = \@messages;
 
         # and get things started ...
         push @signals => Actor::Signals::Lifecycle->STARTED;
@@ -44,12 +48,35 @@ class Actor::Mailbox {
 
     # ...
 
-    method stop    { push @signals => Actor::Signals::Lifecycle->STOPPING   }
-    method restart { push @signals => Actor::Signals::Lifecycle->RESTARTING }
+    method suspend {
+        @buffer   = @messages;
+        @messages = ();
+        $queue = \@buffer;
+        warn sprintf "~ SUSPEND(%s)[ buffered: %d / messages: %d ]\n", $address->path, (scalar @buffer), (scalar @messages);
+    }
+
+    method resume {
+        @messages = @buffer;
+        @buffer   = ();
+        $queue = \@messages;
+        warn sprintf "~ RESUME(%s)[ buffered: %d / messages: %d ]\n", $address->path, (scalar @buffer), (scalar @messages);
+    }
 
     # ...
 
-    method enqueue_message ( $message ) { push @messages => $message }
+    method stop {
+        $self->suspend;
+        push @signals => Actor::Signals::Lifecycle->STOPPING
+    }
+
+    method restart {
+        $self->suspend;
+        push @signals => Actor::Signals::Lifecycle->RESTARTING
+    }
+
+    # ...
+
+    method enqueue_message ( $message ) { push @$queue => $message }
 
     # ...
 
@@ -82,7 +109,8 @@ class Actor::Mailbox {
                 # actor to process any further messages, and the very
                 # next thing it should do is stop
                 if ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
-                    unshift @sigs => Actor::Signals::Lifecycle->STOPPED;
+                    unshift @signals => Actor::Signals::Lifecycle->STOPPED;
+                    last;
                 }
                 ## ----------------------------------------------------
                 ## Restarting
@@ -93,10 +121,13 @@ class Actor::Mailbox {
                 elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
                     # recreate the actor ...
                     $actor = $props->new_actor;
+                    # and resume the mailbox ...
+                    $self->resume;
                     # and make sure the Started signal is the very next
                     # thing we process here so that any initialization
                     # needed can be done
-                    unshift @sigs => Actor::Signals::Lifecycle->STARTED;
+                    unshift @signals => Actor::Signals::Lifecycle->STARTED;
+                    last;
                 }
                 ## ----------------------------------------------------
                 ## Stopped
@@ -107,9 +138,10 @@ class Actor::Mailbox {
                 # them to the deadletter queue, just before exiting
                 # this loop.
                 elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
-                    push @dead_letters => @messages;
+                    push @dead_letters => @messages, @buffer;
                     $actor    = undef;
                     @messages = ();
+                    @buffer   = ();
                     # signals have already been cleared
                     last;
                 }

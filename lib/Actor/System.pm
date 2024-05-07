@@ -36,6 +36,8 @@ class Actor::System {
 
     # ...
 
+    method lookup_mailbox ($address) { $active{ $address->path } }
+
     method spawn_actor ($address, $props, $parent=undef) {
         ($active{ $address->path } = Actor::Mailbox->new(
             address => $address,

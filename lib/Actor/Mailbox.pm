@@ -8,54 +8,48 @@ use Actor::Signals::Lifecycle;
 use Actor::Message;
 
 class Actor::Mailbox {
-    field $ref :param;
+    field $address :param;
+    field $props   :param;
+    field $context :param;
 
-    field $activated = false;
+    field $ref;
 
     field $behavior;
+    field $actor;
+
     field @messages;
     field @signals;
 
-    method ref { $ref }
+    ADJUST {
+        # create all our moving parts
+        $behavior = $props->behavior_for_actor;
+        $actor    = $props->new_actor;
+        $ref      = Actor::Ref->new( address => $address, context => $context );
 
-    # ...
-
-    method is_activated   {   $activated }
-    method is_deactivated { ! $activated }
-
-    method has_messages { !! scalar @messages }
-    method has_signals  { !! scalar @signals  }
-
-    method to_be_run { !! (@signals || ($activated && @messages)) }
-
-    # ...
-
-    method activate {
-        $behavior = $ref->props->new_actor;
+        # and get things started ...
         push @signals => Actor::Signals::Lifecycle->STARTED;
     }
 
-    method stop {
-        push @signals => Actor::Signals::Lifecycle->STOPPING;
-    }
-
-    method restart {
-        push @signals => Actor::Signals::Lifecycle->RESTARTING;
-    }
-
-    method deactivate {
-        push @signals => Actor::Signals::Lifecycle->STOPPED;
-    }
+    method address { $address }
+    method props   { $props   }
+    method context { $context }
+    method ref     { $ref     }
 
     # ...
 
-    method enqueue_message ( $message ) {
-        push @messages => $message;
-    }
+    method is_activated { !! ($actor)                }
+    method has_messages { !! (scalar @messages)      }
+    method has_signals  { !! (scalar @signals)       }
+    method to_be_run    { !! (@signals || @messages) }
 
-    method enqueue_signal ( $signal ) {
-        push @signals => $signal;
-    }
+    # ...
+
+    method stop    { push @signals => Actor::Signals::Lifecycle->STOPPING   }
+    method restart { push @signals => Actor::Signals::Lifecycle->RESTARTING }
+
+    # ...
+
+    method enqueue_message ( $message ) { push @messages => $message }
 
     # ...
 
@@ -66,27 +60,13 @@ class Actor::Mailbox {
             my @sigs  = @signals;
             @signals = ();
 
-            my $context = $ref->context;
             while (@sigs) {
                 my $signal = shift @sigs;
 
                 warn sprintf "> SIG: to:(%s), sig:(%s)\n" => $ref->address->url, blessed $signal;
 
-                ## ----------------------------------------------------
-                ## Started
-                ## ----------------------------------------------------
-                # Before we process this signal, the mailbox has
-                # not been activated, and we want it to be active
-                # by the time it processes this, so we set it here
-                if ( $signal isa Actor::Signals::Lifecycle::Started ) {
-                    die "Activated signal sent to already activated actor, this is not okay"
-                        if $activated;
-
-                    $activated = true;
-                }
-
                 try {
-                    $behavior->signal( $context, $signal );
+                    $behavior->signal( $actor, $context, $signal );
                 } catch ($e) {
                     warn "Error handling signal(".$signal->type.") : $e";
                 }
@@ -112,7 +92,7 @@ class Actor::Mailbox {
                 # do that below
                 elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
                     # recreate the actor ...
-                    $behavior = $ref->props->new_actor;
+                    $actor = $props->new_actor;
                     # and make sure the Started signal is the very next
                     # thing we process here so that any initialization
                     # needed can be done
@@ -128,9 +108,9 @@ class Actor::Mailbox {
                 # this loop.
                 elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
                     push @dead_letters => @messages;
-                    $behavior  = undef;
-                    $activated = false;
+                    $actor    = undef;
                     @messages = ();
+                    # signals have already been cleared
                     last;
                 }
             }
@@ -147,7 +127,7 @@ class Actor::Mailbox {
                 warn sprintf "> MSG: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from ? $message->from->address->url : '~', $message->body // blessed $message;
 
                 try {
-                    $behavior->receive( $context, $message )
+                    $behavior->receive( $actor, $context, $message )
                         or push @dead_letters => $message;
                 } catch ($e) {
                     warn sprintf "! ERR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" => $e, $ref->address->url, $message->from->address->url, $message->body // blessed $message;

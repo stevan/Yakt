@@ -14,4 +14,10 @@ class Actor::Props {
     method new_actor {
         $class->new( %$args )
     }
+
+    method behavior_for_actor {
+        # replace this later, it should be something like
+        # Behaviors->for_class($class)
+        $class->BEHAVIOR
+    }
 }

@@ -10,79 +10,76 @@ use Actor;
 class PingPong::Ping :isa(Actor::Message) {}
 class PingPong::Pong :isa(Actor::Message) {}
 
-class Ping :isa(Actor::Behavior) {
+class Pong {
+    field $ping :param;
+    field $count = 0;
+
+    my $BEHAVIOR //= Actor::Behavior->new(
+        receivers => {
+            PingPong::Pong:: => method ($, $) {
+                $count++;
+                say("Got Pong($count) sending Ping");
+                $ping->send( PingPong::Ping->new );
+            }
+        },
+        signals => {
+            Actor::Signals::Lifecycle::Started:: => method ($, $) {
+                say('Pong is Activated');
+            },
+            Actor::Signals::Lifecycle::Stopping:: => method ($, $) {
+                say('Pong is Stopping');
+            },
+            Actor::Signals::Lifecycle::Restarting:: => method ($, $) {
+                say('Pong is Restarting');
+            },
+            Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
+                say('Pong is Deactivated');
+            },
+        }
+    );
+
+    sub BEHAVIOR { $BEHAVIOR }
+}
+
+class Ping {
     field $pong;
     field $count = 0;
 
-    method signal ($context, $signal) {
-        if ( $signal isa Actor::Signals::Lifecycle::Started ) {
-            say('Ping is activated, creating Pong ...');
-            $pong = $context->spawn(
-                '/pong',
-                Actor::Props->new(
-                    class => 'Pong',
-                    args  => { ping => $context->self },
-                )
-            );
-        }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
-            say('Ping is Stopping');
-        }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
-            say('Ping is Restarting');
-        }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
-            say('Ping is deactivated and Pong will also be');
-        }
-    }
-
-    method receive ($context, $message) {
-        if ( $message isa PingPong::Ping ) {
-            $count++;
-            say("Got Ping($count) sending Pong");
-            $pong->send( PingPong::Pong->new );
-            if ($count > 9) {
-                $context->stop;
+    my $BEHAVIOR //= Actor::Behavior->new(
+        receivers => {
+            PingPong::Ping:: => method ($context, $) {
+                $count++;
+                say("Got Ping($count) sending Pong");
+                $pong->send( PingPong::Pong->new );
+                if ($count > 9) {
+                    $context->stop;
+                }
             }
-            return true;
-        } else {
-            say("Unknown message: $message");
-            return false;
+        },
+        signals => {
+            Actor::Signals::Lifecycle::Started:: => method ($context, $) {
+                say('Ping is activated, creating Pong ...');
+                $pong = $context->spawn(
+                    '/pong',
+                    Actor::Props->new(
+                        class => Pong::,
+                        args  => { ping => $context->self },
+                    )
+                );
+            },
+            Actor::Signals::Lifecycle::Stopping:: => method ($, $) {
+                say('Ping is Stopping');
+            },
+            Actor::Signals::Lifecycle::Restarting:: => method ($, $) {
+                say('Ping is Restarting');
+            },
+            Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
+                say('Ping is deactivated and Pong will also be');
+            },
         }
-    }
-}
+    );
 
-class Pong :isa(Actor::Behavior) {
-    field $ping :param;
-
-    field $count = 0;
-
-    method signal ($context, $signal) {
-        if ( $signal isa Actor::Signals::Lifecycle::Started ) {
-            say('Pong is Activated');
-        }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
-            say('Pong is Stopping');
-        }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
-            say('Pong is Restarting');
-        }
-        elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
-            say('Pong is Deactivated');
-        }
-    }
-
-    method receive ($context, $message) {
-        if ( $message isa PingPong::Pong ) {
-            $count++;
-            say("Got Pong($count) sending Ping");
-            $ping->send( PingPong::Ping->new );
-            return true;
-        } else {
-            say("Unknown message: $message");
-            return false;
-        }
-    }
+    sub BEHAVIOR { $BEHAVIOR }
 }
 
 ## ----------------------------------------------------------------------------

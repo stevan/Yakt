@@ -10,6 +10,10 @@ use Actor::Context;
 use Actor::Mailbox;
 use Actor::Address;
 
+class Actor::System::Actors::Root {
+    sub BEHAVIOR { Actor::Behavior->new }
+}
+
 class Actor::System {
     field $address :param;
 
@@ -23,7 +27,7 @@ class Actor::System {
     ADJUST {
         $root = $self->spawn_actor(
             $address->with_path('/-'),
-            Actor::Props->new( class => 'Actor::Behavior' )
+            Actor::Props->new( class => Actor::System::Actors::Root:: )
         );
     }
 
@@ -32,22 +36,15 @@ class Actor::System {
 
     # ...
 
-    method spawn_actor ($addr, $props, $parent=undef) {
-        my $ref = Actor::Ref->new(
-            address => $addr,
+    method spawn_actor ($address, $props, $parent=undef) {
+        ($active{ $address->path } = Actor::Mailbox->new(
+            address => $address,
             props   => $props,
             context => Actor::Context->new(
                 system => $self,
-                parent => $parent
+                parent => $parent,
             )
-        );
-
-        my $mailbox = Actor::Mailbox->new( ref => $ref );
-        $mailbox->activate;
-
-        $active{ $ref->address->path } = $mailbox;
-
-        return $ref;
+        ))->ref
     }
 
     method despawn_actor ($ref) {
@@ -64,12 +61,6 @@ class Actor::System {
         }
         else {
             push @dead_letters => [ $to, $message ];
-        }
-    }
-
-    method deliver_signal ($to, $signal) {
-        if ( my $mailbox = $active{ $to->address->path } ) {
-            $mailbox->enqueue_signal( $signal );
         }
     }
 
@@ -94,7 +85,7 @@ class Actor::System {
 
             $inactive{ $mailbox->ref->address->path }
                 = delete $active{ $mailbox->ref->address->path }
-                    if $mailbox->is_deactivated;
+                    if !$mailbox->is_activated;
         }
 
         return true;

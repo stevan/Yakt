@@ -1,5 +1,67 @@
 # TODO
 
+## Concepts
+
+### User Level
+
+- Actor
+
+This is user written code, and includes access to a Behavior instance.
+
+An Actor has two APIs, the first is the actor's syncronous API which
+is defined by it's methods, as with normal OOP; the second is the
+Actor's Behavior, which provides the asycnronous API.
+
+The Actor is a managed object, which means that it is not possible to
+have direct access to this object, outside if your class definition.
+This means that all calls much come via the asyncronous API of the
+Behavior, whose code can then call the syncronous methods of the Actor.
+
+- Behavior
+
+This is system code, but is configured via the user code written in the Actor.
+
+* It contains the message callbacks which are the asyncronous API to this class.
+* The asyncronous API can only be called by sending a message through the System.
+
+The Behavior is created via the Actor code, but should be considered to be a
+static value associated with the Actor's class. Meaning that we should have the
+same number of Behavior instances as we have types of Actors
+
+### External System Level
+
+- Ref
+
+This is a reference to an Actor instance and is the means by which we can asyncronously
+communicate with that Actor instance.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 - needs a loop_until_done method on System
 - System needs to note the currently executing context
     - and make it available to others
@@ -63,62 +125,32 @@ Also check out https://metacpan.org/pod/strictures#VERSION-2 for this as well.
 
 ```ruby
 
-class PingPong::Start :isa(Actor::Message) {}
-class PingPong::Ping  :isa(Actor::Message) {}
-class PingPong::Pong  :isa(Actor::Message) {}
+class PingPong       :isa(Actor::Protocol) {}
+class PingPong::Ping :isa(Actor::Message)  {}
+class PingPong::Pong :isa(Actor::Message)  {}
 
-class PingPong :isa(Actor::Protocol) {
-    method Start ($max_ping) { PingPong::Start->new( body => $max_ming ) }
-
-    method Ping { PingPong::Ping->new }
-    method Pong { PingPong::Pong->new }
-}
-
-class PingPong :isa(Actor::Protocol) {
-    method Start :Message(Int);
-    method Ping  :Message;
-    method Pong  :Message;
-}
-
-class Ping :isa(Actor) {
-    use Actor::Protocols PingPong => qw[ Start Ping Pong ];
-
+class Ping :isa(Actor::Behavior) {
     field $pong;
-
     field $count = 0;
-    field $max   = inf;
 
-    method OnActivation :Signal(Lifcycle::Activate) {
-        $pong = spawn '/pong' => Props[ Pong => { ping => $self } ];
-    }
-
-    method Start :Recieve(PingPong::Start) ($m) {
-        $max = $max_ping;
-        $pong->send(Pong);
+    method OnStart :Signal(Lifcycle::Started) {
+        $pong = spawn '/pong' => Props[Pong::, ping => context->self ];
     }
 
     method Ping :Receive(PingPong::Ping) {
-        if ($count < $max) {
-            context->exit;
-            return;
-        }
         $count++;
-        say "Got Ping($count) sending Pong";
-        $pong->send(Pong);
+        $pong->send( PingPong::Pong->new );
+        if ($count > 9) {
+            $context->stop;
+        }
     }
 }
 
-class Pong :isa(Actor) {
-    use Actor::Protocols PingPong => qw[ Ping Pong ];
-
+class Pong :isa(Actor::Behavior) {
     field $ping :param;
 
-    field $count = 0;
-
     method Pong :Receive(PingPong::Pong) {
-        $count++;
-        say "Got Pong($count) sending Ping";
-        $ping->send(Ping);
+        $ping->send( PingPong::Ping->new );
     }
 }
 ```

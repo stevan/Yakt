@@ -43,32 +43,30 @@ class Actor::System {
     method lookup_mailbox ($address) { $active{ $address->path } }
 
     method spawn_actor ($address, $props, $parent=undef) {
-
-        if ($active{ $address->path }) {
-            $logger->log(ERROR, "... we already have this path: ".$address->path) if ERROR;
-        }
-
-        ($active{ $address->path } = Actor::Mailbox->new(
+        my $mailbox = Actor::Mailbox->new(
             address => $address,
             props   => $props,
             context => Actor::Context->new(
                 system => $self,
                 parent => $parent,
             )
-        ))->ref
+        );
+
+        $active{ $mailbox->address->pid } = $mailbox;
+        return $mailbox->ref;
     }
 
     method despawn_actor ($ref) {
-        if ( my $mailbox = delete $active{ $ref->address->path } ) {
+        if ( my $mailbox = delete $active{ $ref->address->pid } ) {
             $mailbox->stop;
-            $stopping{ $ref->address->path } = $mailbox;
+            $stopping{ $ref->address->pid } = $mailbox;
         }
     }
 
     # ...
 
     method deliver_message ($to, $message) {
-        if ( my $mailbox = $active{ $to->address->path } ) {
+        if ( my $mailbox = $active{ $to->address->pid } ) {
             $mailbox->enqueue_message( $message );
         }
         else {
@@ -95,26 +93,26 @@ class Actor::System {
         return false unless @to_run || @to_stop;
 
         $logger->log(INTERNALS, join "\n" =>
-            (sprintf "  + ACTIVE   : %s", join ', ' => map $_->address->url, values %active),
-            (sprintf "  + STOPPING : %s", join ', ' => map $_->address->url, values %stopping),
-            (sprintf "  + INACTIVE : %s", join ', ' => map $_->address->url, values %inactive),
-            (sprintf "  + RUNNING  : %s", join ', ' => map $_->address->url, @to_run),
-            (sprintf "  + SUSPEND  : %s", join ', ' => map $_->address->url, grep $_->is_suspended, @active),
+            (sprintf "  > ACTIVE    : %s", join ', ' => map $_->address->url, values %active),
+            (sprintf "  + RUNNING   : %s", join ', ' => map $_->address->url, @to_run),
+            (sprintf "  - SUSPENDED : %s", join ', ' => map $_->address->url, grep $_->is_suspended, @active),
+            (sprintf "  < STOPPING  : %s", join ', ' => map $_->address->url, values %stopping),
+            (sprintf "  * INACTIVE  : %s", join ', ' => map $_->address->url, values %inactive),
         ) if INTERNALS;
 
         my @dead;
 
         foreach my $mailbox ( @to_stop ) {
             push @dead => $mailbox->tick;
-            $inactive{ $mailbox->ref->address->path }
-                = delete $stopping{ $mailbox->ref->address->path }
+            $inactive{ $mailbox->address->pid }
+                = delete $stopping{ $mailbox->address->pid }
                     if !$mailbox->is_activated;
         }
 
         foreach my $mailbox ( @to_run ) {
             push @dead => $mailbox->tick;
-            $inactive{ $mailbox->ref->address->path }
-                = delete $active{ $mailbox->ref->address->path }
+            $inactive{ $mailbox->address->pid }
+                = delete $active{ $mailbox->address->pid }
                     if !$mailbox->is_activated;
         }
 
@@ -144,9 +142,9 @@ class Actor::System {
             if (keys %active || keys %stopping) {
                 $logger->alert('Zombies');
                 $logger->log(DEBUG, join "\n" =>
-                    (sprintf "  + ACTIVE   : %s", join ', ' => map $_->address->url, values %active),
-                    (sprintf "  + STOPPING : %s", join ', ' => map $_->address->url, values %stopping),
-                    (sprintf "  + INACTIVE : %s", join ', ' => map $_->address->url, values %inactive),
+                    (sprintf "  > ACTIVE    : %s", join ', ' => map $_->address->url, values %active),
+                    (sprintf "  < STOPPING  : %s", join ', ' => map $_->address->url, values %stopping),
+                    (sprintf "  * INACTIVE  : %s", join ', ' => map $_->address->url, values %inactive),
                 );
             }
 

@@ -1,5 +1,27 @@
 # TODO
 
+## Messages
+
+- remove the `body` field from Message
+    - make all messages be able to stringify and desctructure-able
+        - maybe `body` is a method that returns the destructured object
+        - and `to_string`
+
+## System
+
+- System needs to note the currently executing context
+    - and make it available to others
+
+## Supervisors
+
+- Supervisors need to be configurable for given errors
+    - some kind of error dispatch table (`match`)
+
+
+<!---------------------------------------------------------------->
+
+
+
 ## Concepts
 
 ### User Level
@@ -56,15 +78,6 @@ communicate with that Actor instance.
 
 
 
-
-
-
-
-
-
-- needs a loop_until_done method on System
-- System needs to note the currently executing context
-    - and make it available to others
 
 ## Lifecycle
 

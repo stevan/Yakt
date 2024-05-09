@@ -27,7 +27,11 @@ class Actor::Mailbox {
 
     field @signals;
 
+    my $PID_SEQ = 0;
+
     ADJUST {
+        $address = $address->with_pid( ++$PID_SEQ );
+
         # create all our moving parts
         $behavior   = $props->behavior_for_actor;
         $supervisor = $props->supervisor_for_actor;

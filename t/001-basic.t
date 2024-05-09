@@ -49,7 +49,7 @@ class Pong {
             },
             Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
                 $logger->log(INFO, "Pong[$restarts] is Deactivated") if INFO;
-                $restarts = 0;
+                $restarts++;
             },
         }
     );
@@ -106,7 +106,6 @@ class Ping {
             },
             Actor::Signals::Lifecycle::Stopping:: => method ($context, $) {
                 $logger->log(INFO, "Ping[$restarts] is Stopping") if INFO;
-                $context->kill( $pong );
             },
             Actor::Signals::Lifecycle::Restarting:: => method ($context, $) {
                 $logger->log(INFO, "Ping[$restarts] is Restarting") if INFO;
@@ -115,7 +114,7 @@ class Ping {
             },
             Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
                 $logger->log(INFO, "Ping[$restarts] is deactivated and Pong will also be") if INFO;
-                $restarts = 0;
+                $restarts++;
             },
         }
     );

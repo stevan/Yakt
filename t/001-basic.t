@@ -32,7 +32,6 @@ class Pong {
                 $ping->send( PingPong::Ping->new );
 
                 if ($count >= 3) {
-                    $restarts++;
                     die "!!! Sending Restart to Pong";
                 }
             }
@@ -46,14 +45,18 @@ class Pong {
             },
             Actor::Signals::Lifecycle::Restarting:: => method ($, $) {
                 $logger->log(INFO, "Pong[$restarts] is Restarting") if INFO;
+                $restarts++;
             },
             Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
                 $logger->log(INFO, "Pong[$restarts] is Deactivated") if INFO;
+                $restarts = 0;
             },
         }
     );
 
     sub BEHAVIOR { $BEHAVIOR }
+
+    sub SUPERVISOR { Actor::Supervisors->Restart }
 }
 
 class Ping {
@@ -84,7 +87,6 @@ class Ping {
                 $pong->send( PingPong::Pong->new );
 
                 if ($count == 9) {
-                    $restarts++;
                     die "OH NOES!! Ping is dying!";
                 }
             }
@@ -109,9 +111,11 @@ class Ping {
             Actor::Signals::Lifecycle::Restarting:: => method ($context, $) {
                 $logger->log(INFO, "Ping[$restarts] is Restarting") if INFO;
                 $context->kill( $pong );
+                $restarts++;
             },
             Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
                 $logger->log(INFO, "Ping[$restarts] is deactivated and Pong will also be") if INFO;
+                $restarts = 0;
             },
         }
     );

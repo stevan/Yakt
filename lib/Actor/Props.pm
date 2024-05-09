@@ -38,6 +38,6 @@ class Actor::Props {
         # XXX - Yuk, fixme
         $class->can('SUPERVISOR')
             ? $class->SUPERVISOR
-            : Actor::Supervisors->Restart;
+            : Actor::Supervisors->Stop;
     }
 }

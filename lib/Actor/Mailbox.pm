@@ -115,7 +115,7 @@ class Actor::Mailbox {
             my @sigs  = @signals;
             @signals = ();
 
-          SIGNALS:
+          SIGNAL:
             while (@sigs) {
                 my $signal = shift @sigs;
 
@@ -148,7 +148,7 @@ class Actor::Mailbox {
                 if ( $signal isa Actor::Signals::Lifecycle::Stopping:: ) {
                     $logger->log(INTERNALS, "__ STOPPING") if INTERNALS;
                     unshift @signals => Actor::Signals::Lifecycle->Stopped;
-                    last SIGNALS;
+                    last SIGNAL;
                 }
                 ## ----------------------------------------------------
                 ## Restarting
@@ -189,7 +189,7 @@ class Actor::Mailbox {
                     @messages = ();
                     @buffer   = ();
                     # signals have already been cleared
-                    last SIGNALS;
+                    last SIGNAL;
                 }
 
                 $logger->log(INTERNALS, "__ END LIFECYCLE CHECK") if INTERNALS;
@@ -201,7 +201,8 @@ class Actor::Mailbox {
             @messages = ();
 
             my $context = $ref->context;
-          MESSAGES:
+
+          MESSAGE:
             while (@msgs) {
                 my $message = shift @msgs;
 
@@ -226,14 +227,20 @@ class Actor::Mailbox {
 
                     #push @dead_letters => $message;
 
-                    if ($supervisor->supervise($self, $e)) {
-                        $logger->log(INTERNALS, "supervisor said to resume ...") if INTERNALS;
+                    my $action = $supervisor->supervise($self, $e, $message);
+
+                    if ($action == $supervisor->RETRY) {
+                        $logger->log(INTERNALS, "supervisor said to retry ...") if INTERNALS;
                         unshift @msgs => $message;
                     }
-                    else {
-                        $logger->log(INTERNALS, "supervisor said NOT to resume ...") if INTERNALS;
-                        unshift @buffer => $message, @msgs;
-                        last MESSAGES;
+                    elsif ($action == $supervisor->RESUME) {
+                        $logger->log(INTERNALS, "supervisor said to resume (and not retry) ...") if INTERNALS;
+                        next MESSAGE;
+                    }
+                    elsif ($action == $supervisor->HALT) {
+                        $logger->log(INTERNALS, "supervisor said to halt ...") if INTERNALS;
+                        unshift @buffer => @msgs;
+                        last MESSAGE;
                     }
                 }
 

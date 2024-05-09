@@ -11,34 +11,44 @@ class PingPong::Ping :isa(Actor::Message) {}
 class PingPong::Pong :isa(Actor::Message) {}
 
 class Pong {
+    use Actor::Logging;
+
     field $ping :param;
     field $count = 0;
+
+    field $logger;
+
+    my $restarts = 0;
+
+    ADJUST {
+        $logger = Actor::Logging->logger( "Pong" ) if LOG_LEVEL;
+    }
 
     my $BEHAVIOR //= Actor::Behavior->new(
         receivers => {
             PingPong::Pong:: => method ($context, $) {
                 $count++;
-                say("Got Pong($count) sending Ping");
+                $logger->log(INFO, "Got Pong[$restarts]($count) sending Ping") if INFO;
                 $ping->send( PingPong::Ping->new );
+
                 if ($count >= 3) {
-                    say "!!! Sending Restart to Pong";
-                    #$context->self->send( PingPong::Pong->new ) foreach 0 .. 10;
-                    $context->system->lookup_mailbox( $context->self->address )->restart;
+                    $restarts++;
+                    die "!!! Sending Restart to Pong";
                 }
             }
         },
         signals => {
             Actor::Signals::Lifecycle::Started:: => method ($, $) {
-                say('Pong is Activated');
+                $logger->log(INFO, "Pong[$restarts] is Activated") if INFO;
             },
             Actor::Signals::Lifecycle::Stopping:: => method ($, $) {
-                say('Pong is Stopping');
+                $logger->log(INFO, "Pong[$restarts] is Stopping") if INFO;
             },
             Actor::Signals::Lifecycle::Restarting:: => method ($, $) {
-                say('Pong is Restarting');
+                $logger->log(INFO, "Pong[$restarts] is Restarting") if INFO;
             },
             Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
-                say('Pong is Deactivated');
+                $logger->log(INFO, "Pong[$restarts] is Deactivated") if INFO;
             },
         }
     );
@@ -47,23 +57,41 @@ class Pong {
 }
 
 class Ping {
+    use Actor::Logging;
+
     field $pong;
     field $count = 0;
+
+    field $logger;
+
+    my $restarts = 0;
+
+    ADJUST {
+        $logger = Actor::Logging->logger( "Ping" ) if LOG_LEVEL;
+    }
 
     my $BEHAVIOR //= Actor::Behavior->new(
         receivers => {
             PingPong::Ping:: => method ($context, $) {
-                $count++;
-                say("Got Ping($count) sending Pong");
-                $pong->send( PingPong::Pong->new );
-                if ($count >= 9) {
+                if ($restarts == 2) {
+                    $logger->log(INFO, "!! Stopping Ping[$restarts]($count)") if INFO;
                     $context->stop;
+                    return;
+                }
+
+                $count++;
+                $logger->log(INFO, "Got Ping[$restarts]($count) sending Pong") if INFO;
+                $pong->send( PingPong::Pong->new );
+
+                if ($count == 9) {
+                    $restarts++;
+                    die "OH NOES!! Ping is dying!";
                 }
             }
         },
         signals => {
             Actor::Signals::Lifecycle::Started:: => method ($context, $) {
-                say('Ping is activated, creating Pong ...');
+                $logger->log(INFO, "Ping[$restarts] is activated, creating Pong ...") if INFO;
                 $pong = $context->spawn(
                     '/pong',
                     Actor::Props->new(
@@ -71,20 +99,26 @@ class Ping {
                         args  => { ping => $context->self },
                     )
                 );
+
+                $pong->send( PingPong::Pong->new );
             },
-            Actor::Signals::Lifecycle::Stopping:: => method ($, $) {
-                say('Ping is Stopping');
+            Actor::Signals::Lifecycle::Stopping:: => method ($context, $) {
+                $logger->log(INFO, "Ping[$restarts] is Stopping") if INFO;
+                $context->kill( $pong );
             },
-            Actor::Signals::Lifecycle::Restarting:: => method ($, $) {
-                say('Ping is Restarting');
+            Actor::Signals::Lifecycle::Restarting:: => method ($context, $) {
+                $logger->log(INFO, "Ping[$restarts] is Restarting") if INFO;
+                $context->kill( $pong );
             },
             Actor::Signals::Lifecycle::Stopped:: => method ($, $) {
-                say('Ping is deactivated and Pong will also be');
+                $logger->log(INFO, "Ping[$restarts] is deactivated and Pong will also be") if INFO;
             },
         }
     );
 
     sub BEHAVIOR { $BEHAVIOR }
+
+    sub SUPERVISOR { Actor::Supervisors->Restart }
 }
 
 ## ----------------------------------------------------------------------------
@@ -94,30 +128,10 @@ my $system = Actor::System->new(
     address => Actor::Address->new
 );
 
-warn "Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
-
 my $root = $system->root->context;
 my $ping = $root->spawn( '/ping' => Actor::Props->new( class => 'Ping' ) );
 
-warn "Mailboxes:\n    ",(join ', ' => sort $system->list_active_mailboxes),"\n";
-
-$ping->send( PingPong::Ping->new );
-
 $system->loop_until_done;
-
-if ( my @dead_letters = $system->get_dead_letters ) {
-    warn "Dead Letters:\n";
-    warn map {
-        sprintf "    to:(%s), from:(%s), msg:(%s)\n" => (
-            $_->[0]->address->url,
-            $_->[1]->from ? $_->[1]->from->address->url : '~',
-            $_->[1]->body // blessed $_->[1]
-        )
-    } @dead_letters;
-}
-
-warn "Active Mailboxes:  \n    ",(join ', ' => sort $system->list_active_mailboxes  ),"\n";
-warn "Inactive Mailboxes:\n    ",(join ', ' => sort $system->list_inactive_mailboxes),"\n";
 
 done_testing;
 

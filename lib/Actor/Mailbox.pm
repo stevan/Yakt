@@ -8,13 +8,17 @@ use Actor::Signals;
 use Actor::Message;
 
 class Actor::Mailbox {
+    use Actor::Logging;
+
     field $address :param;
     field $props   :param;
     field $context :param;
 
     field $ref;
 
+    field $logger;
     field $behavior;
+    field $supervisor;
     field $actor;
 
     field $queue;
@@ -25,13 +29,15 @@ class Actor::Mailbox {
 
     ADJUST {
         # create all our moving parts
-        $behavior = $props->behavior_for_actor;
-        $actor    = $props->new_actor;
-        $ref      = Actor::Ref->new( address => $address, context => $context );
-        $queue    = \@messages;
+        $behavior   = $props->behavior_for_actor;
+        $supervisor = $props->supervisor_for_actor;
+        $actor      = $props->new_actor;
+        $ref        = Actor::Ref->new( address => $address, context => $context );
+        $queue      = \@messages;
+        $logger     = Actor::Logging->logger( sprintf 'Mailbox(%d)[%s]', refaddr $self, $address->url );
 
         # and get things started ...
-        push @signals => Actor::Signals::Lifecycle->STARTED;
+        push @signals => Actor::Signals::Lifecycle->Started;
     }
 
     method address { $address }
@@ -40,7 +46,7 @@ class Actor::Mailbox {
     method ref     { $ref     }
 
     # ...
-
+    method is_suspended { $queue != \@messages }
     method is_activated { !! ($actor)                }
     method has_messages { !! (scalar @messages)      }
     method has_signals  { !! (scalar @signals)       }
@@ -52,26 +58,46 @@ class Actor::Mailbox {
         @buffer   = @messages;
         @messages = ();
         $queue = \@buffer;
-        warn sprintf "~ SUSPEND(%s)[ buffered: %d / messages: %d ]\n", $address->path, (scalar @buffer), (scalar @messages);
+        $logger->log(INTERNALS,
+            sprintf "~ SUSPEND(%s)[ buffered: %d <- messages: %d ]\n",
+                $address->path, (scalar @buffer), (scalar @messages)
+        ) if INTERNALS;
     }
 
     method resume {
+        $logger->log(INTERNALS,
+            sprintf "~ RESUME(%s)[ buffered: %d -> messages: %d ]\n",
+                $address->path, (scalar @buffer), (scalar @messages)
+        ) if INTERNALS;
         @messages = @buffer;
         @buffer   = ();
         $queue = \@messages;
-        warn sprintf "~ RESUME(%s)[ buffered: %d / messages: %d ]\n", $address->path, (scalar @buffer), (scalar @messages);
     }
 
     # ...
 
     method stop {
-        $self->suspend;
-        push @signals => Actor::Signals::Lifecycle->STOPPING
+        if ($self->is_suspended) {
+            $logger->log(WARN, "Trying to stop something that is already suspeneded" ) if WARN;
+            # be forceful!
+            unshift @signals => Actor::Signals::Lifecycle->Stopping
+                # unless we already were being forceful already
+                unless $signals[0] isa Actor::Signals::Lifecycle::Stopping::;
+        }
+        else {
+            $self->suspend;
+            unshift @signals => Actor::Signals::Lifecycle->Stopping;
+        }
     }
 
     method restart {
-        $self->suspend;
-        push @signals => Actor::Signals::Lifecycle->RESTARTING
+        if ($self->is_suspended) {
+            $logger->log(ERROR,"Cannot restart something that is already suspeneded") if ERROR;
+        }
+        else {
+            $self->suspend;
+            push @signals => Actor::Signals::Lifecycle->Restarting
+        }
     }
 
     # ...
@@ -83,20 +109,30 @@ class Actor::Mailbox {
     method tick {
         my @dead_letters;
 
+        $logger->line("tick[ ".$address->url." ]", "[ $actor ]") if DEBUG;
+
         if (@signals) {
             my @sigs  = @signals;
             @signals = ();
 
+          SIGNALS:
             while (@sigs) {
                 my $signal = shift @sigs;
 
-                warn sprintf "> SIG: to:(%s), sig:(%s)\n" => $ref->address->url, blessed $signal;
+                $logger->log(DEBUG,
+                    sprintf "> SIG: to:(%s), sig:(%s)\n" =>
+                        $ref->address->url, blessed $signal
+                ) if DEBUG;
 
                 try {
                     $behavior->signal( $actor, $context, $signal );
                 } catch ($e) {
-                    warn "Error handling signal(".$signal->type.") : $e";
+                    $logger->log(ERROR, "Error handling signal(".$signal->type.") : $e") if ERROR;
                 }
+
+                $logger->log(INTERNALS,
+                    "__ CHECKING LIFECYCLE >> SIGNAL: ", blessed $signal
+                ) if INTERNALS;
 
                 ## ----------------------------------------------------
                 ## Stopping
@@ -104,13 +140,15 @@ class Actor::Mailbox {
                 # if we have just processed a Stopping signal, that
                 # means we are now ready to stop, so we just add
                 # that signal to be the first one processed on the
-                # next loop and explicitly NOT on the next tick,
-                # or after other signals, ... as we do not want this
-                # actor to process any further messages, and the very
-                # next thing it should do is stop
-                if ( $signal isa Actor::Signals::Lifecycle::Stopping ) {
-                    unshift @signals => Actor::Signals::Lifecycle->STOPPED;
-                    last;
+                # next tick. This should be fine because the mailbox
+                # is suspended, and we will exit this loop immediately
+                # resulting in this tick exiting. The subsequent tick
+                # will then result with the STOPPED signal as the first
+                # thing processed.
+                if ( $signal isa Actor::Signals::Lifecycle::Stopping:: ) {
+                    $logger->log(INTERNALS, "__ STOPPING") if INTERNALS;
+                    unshift @signals => Actor::Signals::Lifecycle->Stopped;
+                    last SIGNALS;
                 }
                 ## ----------------------------------------------------
                 ## Restarting
@@ -118,16 +156,23 @@ class Actor::Mailbox {
                 # if we have just processed a Restarting signal
                 # then we are prepared for a restart, and can
                 # do that below
-                elsif ( $signal isa Actor::Signals::Lifecycle::Restarting ) {
+                if ( $signal isa Actor::Signals::Lifecycle::Restarting:: ) {
+                    $logger->log(INTERNALS, "__ RESTARTING") if INTERNALS;
                     # recreate the actor ...
                     $actor = $props->new_actor;
                     # and resume the mailbox ...
                     $self->resume;
                     # and make sure the Started signal is the very next
                     # thing we process here so that any initialization
-                    # needed can be done
-                    unshift @signals => Actor::Signals::Lifecycle->STARTED;
-                    last;
+                    # needed can be done. This is kind of the opposite
+                    # of what needs to be done. If we were to use `last`
+                    # here, then it would start processing messages
+                    # since we resumed the mailbox. However, that is
+                    # not what want, so we actually `return` here
+                    # instead, and assure that Started signal is the
+                    # very next things we process.
+                    unshift @signals => Actor::Signals::Lifecycle->Started;
+                    return;
                 }
                 ## ----------------------------------------------------
                 ## Stopped
@@ -137,14 +182,17 @@ class Actor::Mailbox {
                 # mailbox. We also remove all the messages and return
                 # them to the deadletter queue, just before exiting
                 # this loop.
-                elsif ( $signal isa Actor::Signals::Lifecycle::Stopped ) {
+                if ( $signal isa Actor::Signals::Lifecycle::Stopped:: ) {
+                    $logger->log(INTERNALS, sprintf "__ STOPPED (%d, %d)" => scalar(@messages), scalar(@buffer)) if INTERNALS;
                     push @dead_letters => @messages, @buffer;
                     $actor    = undef;
                     @messages = ();
                     @buffer   = ();
                     # signals have already been cleared
-                    last;
+                    last SIGNALS;
                 }
+
+                $logger->log(INTERNALS, "__ END LIFECYCLE CHECK") if INTERNALS;
             }
         }
 
@@ -153,18 +201,43 @@ class Actor::Mailbox {
             @messages = ();
 
             my $context = $ref->context;
+          MESSAGES:
             while (@msgs) {
                 my $message = shift @msgs;
 
-                warn sprintf "> MSG: to:(%s), from:(%s), body:(%s)\n" => $ref->address->url, $message->from ? $message->from->address->url : '~', $message->body // blessed $message;
+                $logger->log(DEBUG,
+                    sprintf "> MSG: to:(%s), from:(%s), body:(%s)\n" =>
+                        $ref->address->url,
+                        $message->from ? $message->from->address->url : '~',
+                        $message->body // blessed $message
+                ) if DEBUG;
 
                 try {
                     $behavior->receive( $actor, $context, $message )
                         or push @dead_letters => $message;
                 } catch ($e) {
-                    warn sprintf "! ERR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" => $e, $ref->address->url, $message->from->address->url, $message->body // blessed $message;
-                    push @dead_letters => $message;
+                    $logger->log(ERROR,
+                        sprintf "! ERR[ %s ] MSG[ to:(%s), from:(%s), body:(%s) ]\n" =>
+                            $e =~ s/\n$//r,
+                            $ref->address->url,
+                            $message->from ? $message->from->address->url : '~',
+                            $message->body // blessed $message
+                    ) if ERROR;
+
+                    #push @dead_letters => $message;
+
+                    if ($supervisor->supervise($self, $e)) {
+                        $logger->log(INTERNALS, "supervisor said to resume ...") if INTERNALS;
+                        unshift @msgs => $message;
+                    }
+                    else {
+                        $logger->log(INTERNALS, "supervisor said NOT to resume ...") if INTERNALS;
+                        unshift @buffer => $message, @msgs;
+                        last MESSAGES;
+                    }
                 }
+
+                last if $self->is_suspended;
             }
         }
 

@@ -10,23 +10,27 @@ use Actor::Context;
 use Actor::Mailbox;
 use Actor::Address;
 
-class Actor::System::Actors::Root {
-    sub BEHAVIOR { Actor::Behavior->new }
-}
+class Actor::System::Actors::Root {}
 
 class Actor::System {
+    use Actor::Logging;
+
     field $address :param;
 
     field $root;
 
     field %active;
+    field %stopping;
     field %inactive;
 
     field @dead_letters;
 
+    field $logger;
+
     ADJUST {
-        $root = $self->spawn_actor(
-            $address->with_path('/-'),
+        $logger = Actor::Logging->logger( sprintf "System[%s]" => $address->url ) if LOG_LEVEL;
+        $root   = $self->spawn_actor(
+            $address,
             Actor::Props->new( class => Actor::System::Actors::Root:: )
         );
     }
@@ -39,6 +43,11 @@ class Actor::System {
     method lookup_mailbox ($address) { $active{ $address->path } }
 
     method spawn_actor ($address, $props, $parent=undef) {
+
+        if ($active{ $address->path }) {
+            $logger->log(ERROR, "... we already have this path: ".$address->path) if ERROR;
+        }
+
         ($active{ $address->path } = Actor::Mailbox->new(
             address => $address,
             props   => $props,
@@ -50,8 +59,9 @@ class Actor::System {
     }
 
     method despawn_actor ($ref) {
-        if ( my $mailbox = $active{ $ref->address->path } ) {
+        if ( my $mailbox = delete $active{ $ref->address->path } ) {
             $mailbox->stop;
+            $stopping{ $ref->address->path } = $mailbox;
         }
     }
 
@@ -77,24 +87,83 @@ class Actor::System {
     # ...
 
     method tick {
-        warn "-- tick ------------------------------------------------------------\n";
-        my @to_run = grep $_->to_be_run, values %active;
+        $logger->header('tick') if DEBUG;
+        my @active  = values %active;
+        my @to_run  = grep $_->to_be_run, @active;
+        my @to_stop = values %stopping;
 
-        return false unless @to_run;
+        return false unless @to_run || @to_stop;
+
+        $logger->log(INTERNALS, join "\n" =>
+            (sprintf "  + ACTIVE   : %s", join ', ' => map $_->address->url, values %active),
+            (sprintf "  + STOPPING : %s", join ', ' => map $_->address->url, values %stopping),
+            (sprintf "  + INACTIVE : %s", join ', ' => map $_->address->url, values %inactive),
+            (sprintf "  + RUNNING  : %s", join ', ' => map $_->address->url, @to_run),
+            (sprintf "  + SUSPEND  : %s", join ', ' => map $_->address->url, grep $_->is_suspended, @active),
+        ) if INTERNALS;
+
+        my @dead;
+
+        foreach my $mailbox ( @to_stop ) {
+            push @dead => $mailbox->tick;
+            $inactive{ $mailbox->ref->address->path }
+                = delete $stopping{ $mailbox->ref->address->path }
+                    if !$mailbox->is_activated;
+        }
 
         foreach my $mailbox ( @to_run ) {
-            push @dead_letters => $mailbox->tick;
-
+            push @dead => $mailbox->tick;
             $inactive{ $mailbox->ref->address->path }
                 = delete $active{ $mailbox->ref->address->path }
                     if !$mailbox->is_activated;
+        }
+
+        if (WARN && @dead ) {
+            $logger->alert('Dead Letters');
+            $logger->log(WARN, join "\n" =>
+                map {
+                    sprintf "    to:(%s), from:(%s), msg:(%s)" => (
+                        $_->[0]->address->url,
+                        $_->[1]->from ? $_->[1]->from->address->url : '~',
+                        $_->[1]->body // blessed $_->[1]
+                    )
+                } @dead
+            );
+            push @dead_letters => @dead;
         }
 
         return true;
     }
 
     method loop_until_done {
+        $logger->line('starting loop') if DEBUG;
         1 while $self->tick;
+        $logger->line('ending loop') if DEBUG;
+
+        if (DEBUG) {
+            if (keys %active || keys %stopping) {
+                $logger->alert('Zombies');
+                $logger->log(DEBUG, join "\n" =>
+                    (sprintf "  + ACTIVE   : %s", join ', ' => map $_->address->url, values %active),
+                    (sprintf "  + STOPPING : %s", join ', ' => map $_->address->url, values %stopping),
+                    (sprintf "  + INACTIVE : %s", join ', ' => map $_->address->url, values %inactive),
+                );
+            }
+
+            if (@dead_letters) {
+                $logger->alert('Dead Letters');
+                $logger->log(WARN, join "\n" =>
+                    map {
+                        sprintf "    to:(%s), from:(%s), msg:(%s)" => (
+                            $_->[0]->address->url,
+                            $_->[1]->from ? $_->[1]->from->address->url : '~',
+                            $_->[1]->body // blessed $_->[1]
+                        )
+                    } @dead_letters
+                );
+            }
+        }
+
     }
 }
 

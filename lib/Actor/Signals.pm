@@ -40,8 +40,8 @@ class Actor::Signals::Lifecycle::Restarting :isa(Actor::Signal) {}
 class Actor::Signals::Lifecycle::Stopped    :isa(Actor::Signal) {}
 
 class Actor::Signals::Lifecycle {
-    use constant STARTED    => Actor::Signals::Lifecycle::Started->new;
-    use constant STOPPING   => Actor::Signals::Lifecycle::Stopping->new;
-    use constant RESTARTING => Actor::Signals::Lifecycle::Restarting->new;
-    use constant STOPPED    => Actor::Signals::Lifecycle::Stopped->new;
+    use constant Started    => Actor::Signals::Lifecycle::Started->new;
+    use constant Stopping   => Actor::Signals::Lifecycle::Stopping->new;
+    use constant Restarting => Actor::Signals::Lifecycle::Restarting->new;
+    use constant Stopped    => Actor::Signals::Lifecycle::Stopped->new;
 }

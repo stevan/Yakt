@@ -214,7 +214,7 @@ class Actor::Mailbox {
                     sprintf "> MSG: to:(%s), from:(%s), body:(%s)\n" =>
                         $ref->address->url,
                         $message->from ? $message->from->address->url : '~',
-                        $message->body // blessed $message
+                        $message->to_string
                 ) if DEBUG;
 
                 try {
@@ -226,7 +226,7 @@ class Actor::Mailbox {
                             $e =~ s/\n$//r,
                             $ref->address->url,
                             $message->from ? $message->from->address->url : '~',
-                            $message->body // blessed $message
+                            $message->to_string
                     ) if ERROR;
 
                     #push @dead_letters => $message;
@@ -234,15 +234,15 @@ class Actor::Mailbox {
                     my $action = $supervisor->supervise($self, $e, $message);
 
                     if ($action == $supervisor->RETRY) {
-                        $logger->log(INTERNALS, "supervisor said to retry ...") if INTERNALS;
+                        $logger->log(DEBUG, "supervisor said to retry ...") if DEBUG;
                         unshift @msgs => $message;
                     }
                     elsif ($action == $supervisor->RESUME) {
-                        $logger->log(INTERNALS, "supervisor said to resume (and not retry) ...") if INTERNALS;
+                        $logger->log(DEBUG, "supervisor said to resume (and not retry) ...") if DEBUG;
                         next MESSAGE;
                     }
                     elsif ($action == $supervisor->HALT) {
-                        $logger->log(INTERNALS, "supervisor said to halt ...") if INTERNALS;
+                        $logger->log(DEBUG, "supervisor said to halt ...") if DEBUG;
                         unshift @buffer => @msgs;
                         last MESSAGE;
                     }

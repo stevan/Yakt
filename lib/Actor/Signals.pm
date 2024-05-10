@@ -10,10 +10,7 @@ class Actor::Signals {}
 # Signal class
 # -------------------------------------------------------------------
 
-class Actor::Signal {
-    field $body :param = undef;
-    method body { $body }
-}
+class Actor::Signal {}
 
 # -------------------------------------------------------------------
 # Lifecycle Signals

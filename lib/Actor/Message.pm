@@ -5,11 +5,13 @@ use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
 class Actor::Message {
+    use overload '""' => 'to_string';
+
     field $from     :param = undef;
     field $reply_to :param = undef;
-    field $body     :param = undef;
 
     method from     { $from     }
     method reply_to { $reply_to }
-    method body     { $body     }
+
+    method to_string { blessed $self }
 }

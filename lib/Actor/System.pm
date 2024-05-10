@@ -92,13 +92,13 @@ class Actor::System {
 
         return false unless @to_run || @to_stop;
 
-        $logger->log(INTERNALS, join "\n" =>
+        $logger->log(DEBUG, join "\n" =>
             (sprintf "  > ACTIVE    : %s", join ', ' => map $_->address->url, values %active),
             (sprintf "  + RUNNING   : %s", join ', ' => map $_->address->url, @to_run),
             (sprintf "  - SUSPENDED : %s", join ', ' => map $_->address->url, grep $_->is_suspended, @active),
             (sprintf "  < STOPPING  : %s", join ', ' => map $_->address->url, values %stopping),
             (sprintf "  * INACTIVE  : %s", join ', ' => map $_->address->url, values %inactive),
-        ) if INTERNALS;
+        ) if DEBUG;
 
         my @dead;
 
@@ -123,7 +123,7 @@ class Actor::System {
                     sprintf "    to:(%s), from:(%s), msg:(%s)" => (
                         $_->[0]->address->url,
                         $_->[1]->from ? $_->[1]->from->address->url : '~',
-                        $_->[1]->body // blessed $_->[1]
+                        $_->[1]->to_string
                     )
                 } @dead
             );
@@ -147,19 +147,19 @@ class Actor::System {
                     (sprintf "  * INACTIVE  : %s", join ', ' => map $_->address->url, values %inactive),
                 );
             }
+        }
 
-            if (@dead_letters) {
-                $logger->alert('Dead Letters');
-                $logger->log(WARN, join "\n" =>
-                    map {
-                        sprintf "    to:(%s), from:(%s), msg:(%s)" => (
-                            $_->[0]->address->url,
-                            $_->[1]->from ? $_->[1]->from->address->url : '~',
-                            $_->[1]->body // blessed $_->[1]
-                        )
-                    } @dead_letters
-                );
-            }
+        if (WARN && @dead_letters) {
+            $logger->alert('Final Dead Letters');
+            $logger->log(WARN, join "\n" =>
+                map {
+                    sprintf "    to:(%s), from:(%s), msg:(%s)" => (
+                        $_->[0]->address->url,
+                        $_->[1]->from ? $_->[1]->from->address->url : '~',
+                        $_->[1]->to_string
+                    )
+                } @dead_letters
+            );
         }
 
     }

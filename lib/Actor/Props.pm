@@ -23,7 +23,7 @@ class Actor::Props {
     method args  { $args  }
 
     method new_actor {
-        $logger->log(INTERNALS, "Creating new actor for ($class)") if INTERNALS;
+        $logger->log(DEBUG, "Creating new actor for ($class)") if DEBUG;
         $class->new( %$args )
     }
 

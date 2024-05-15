@@ -1,11 +1,34 @@
 # TODO
 
+## Address
+
+- don't do `0002@localhost:3000/foo/bar`
+    - do `localhost:3000/foo/bar/2`
+    - it is more REST appropriate and conveys the relationships better
+        - i.e. - instance PID(2) of the `/foo/bar` actor
+
+## Mailbox
+
+- add `Terminated` signals
+    - sent to watchers if `Stopped`
+
+- should parent/child stuff be in Mailbox? or stay in Context?
+    - this is mostly a question because of controlled destruction
+        - parents need to wait for children to stop before stopping
+          this will be handled by sending `->stop` to all children and
+          then collecting all the `Terminated` signals from those children
+          after which point the parent can stop
+    - what role do Supervisors play in this?
+        - Do we need an `Escalate` signals to say "let me parent supervise me"?
+            - how does this work anyway????
+    - can this be accomplished with a more generic `watcher` or `monitor` feature?
+        - does the Mailbox need to know about the heirarchy?
+        - if parents `watch/monitor` their children, is that enough?
+
+
 ## Messages
 
-- remove the `body` field from Message
-    - make all messages be able to stringify and desctructure-able
-        - maybe `body` is a method that returns the destructured object
-        - and `to_string`
+- make all messages be able to stringify and desctructure-able
 
 ## System
 

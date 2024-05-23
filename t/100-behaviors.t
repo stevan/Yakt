@@ -515,12 +515,14 @@ class Foo :isa(Actor) {
             ));
         }
         else {
+            # find the topmost Foo
             my $x = $context->self;
             do {
                 $x = $x->context->parent;
             } while $x->context->parent
                  && $x->context->parent->context->props->class eq 'Foo';
 
+            # and stop it
             $x->context->stop;
         }
     }

@@ -1,5 +1,29 @@
 # TODO
 
+
+## Behaviors
+
+The method Akka uses with different wrappers for the behaviors
+is interesting and would simplify the Mailbox perhaps.
+
+
+- SameBehavior
+    - return the same thing
+
+- UnhandledBehavior
+- StoppedBehavior
+    - the actor has been sopped
+- EmptyBehavior
+- IgnoreBehavior
+- FailedBehavior
+    - the actor failed for some reason
+
+- DeferredBehavior
+    - this is used for Setup??
+
+
+
+
 ## Address
 
 - don't do `0002@localhost:3000/foo/bar`

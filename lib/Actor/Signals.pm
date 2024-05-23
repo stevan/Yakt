@@ -36,9 +36,16 @@ class Actor::Signals::Lifecycle::Stopping   :isa(Actor::Signal) {}
 class Actor::Signals::Lifecycle::Restarting :isa(Actor::Signal) {}
 class Actor::Signals::Lifecycle::Stopped    :isa(Actor::Signal) {}
 
+class Actor::Signals::Lifecycle::Terminated :isa(Actor::Signal) {
+    field $pid :param;
+    method pid { $pid }
+}
+
 class Actor::Signals::Lifecycle {
     use constant Started    => Actor::Signals::Lifecycle::Started->new;
     use constant Stopping   => Actor::Signals::Lifecycle::Stopping->new;
     use constant Restarting => Actor::Signals::Lifecycle::Restarting->new;
     use constant Stopped    => Actor::Signals::Lifecycle::Stopped->new;
+
+    sub Terminated ($, $pid) { Actor::Signals::Lifecycle::Terminated->new( pid => $pid ) }
 }

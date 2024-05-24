@@ -18,14 +18,8 @@ class Foo :isa(Acktor) {
 
     my $RESTARTS = 0;
 
-    field $logger;
-
-    ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-    }
-
     method apply ($context, $message) {
-        $logger->log(INFO, "HELLO JOE! => { Actor($self) got $context and message($message) }" ) if INFO;
+        $self->logger->log(INFO, "HELLO JOE! => { Actor($self) got $context and message($message) }" ) if INFO;
         if ($message isa Bar) {
             $RESTARTS++;
             die "Going to Restart!"
@@ -33,7 +27,7 @@ class Foo :isa(Acktor) {
     }
 
     method post_start  ($context) {
-        $logger->log(INFO, sprintf 'Started    %s' => $context->self ) if INFO;
+        $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
         if ( $depth <= $max ) {
             $context->spawn(Acktor::Props->new(
                 class => 'Foo',
@@ -60,6 +54,10 @@ class Foo :isa(Acktor) {
             }
         }
     }
+
+    method pre_stop    ($context) { $self->logger->log( INFO, sprintf   'Stopping %s' => $context->self ) if INFO }
+    method pre_restart ($context) { $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO }
+    method post_stop   ($context) { $self->logger->log( INFO, sprintf    'Stopped %s' => $context->self ) if INFO }
 }
 
 my $sys = Acktor::System->new->init(sub ($context) {

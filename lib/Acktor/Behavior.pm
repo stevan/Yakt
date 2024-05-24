@@ -14,12 +14,12 @@ class Acktor::Behavior {
     }
 
     method receive_message ($actor, $context, $message) {
-        $logger->log(INTERNALS, "<<< Behavior->receive_message(actor($actor), context($context), message($message))" ) if INTERNALS;
+        $logger->log(INTERNALS, "receive_message(actor($actor), context($context), message($message))" ) if INTERNALS;
         $actor->apply($context, $message);
     }
 
     method receive_signal  ($actor, $context, $signal)  {
-        $logger->log(INTERNALS, "<<< Behavior->receive_signal(actor($actor), context($context), signal($signal))" ) if INTERNALS;
+        $logger->log(INTERNALS, "receive_signal(actor($actor), context($context), signal($signal))" ) if INTERNALS;
         $actor->apply($context, $signal);
     }
 }

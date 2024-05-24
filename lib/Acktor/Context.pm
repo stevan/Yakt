@@ -16,7 +16,7 @@ class Acktor::Context {
     field $logger;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+        $logger = Acktor::Logging->logger(__PACKAGE__."[ ".$mailbox->props->class."<".$ref->pid."> ]") if LOG_LEVEL;
 
         $ref->set_context( $self );
     }
@@ -27,19 +27,19 @@ class Acktor::Context {
     method props    { $mailbox->props    }
 
     method spawn ($props) {
-        $logger->log(DEBUG, "+ $self -> spawn($props)" ) if DEBUG;
+        $logger->log(DEBUG, "spawn($props)" ) if DEBUG;
         my $child = $system->spawn_actor($props, $ref);
         $mailbox->add_child( $child );
         return $child;
     }
 
     method send_message ($to, $message) {
-        $logger->log(DEBUG, ">> $self -> send_message($to, $message)" ) if DEBUG;
+        $logger->log(DEBUG, "send_message($to, $message)" ) if DEBUG;
         $system->enqueue_message( $to, $message );
     }
 
     method stop {
-        $logger->log(DEBUG, ">> $self -> stop($ref)[".$ref->pid."]" ) if DEBUG;
+        $logger->log(DEBUG, "stop($ref)[".$ref->pid."]" ) if DEBUG;
         $system->despawn_actor( $ref );
     }
 
@@ -50,6 +50,6 @@ class Acktor::Context {
     method restart { $mailbox->restart }
 
     method to_string {
-        sprintf 'Context{ %s }' => $ref;
+        sprintf 'Context{ %s }' => $ref->pid;
     }
 }

@@ -27,6 +27,7 @@ class Acktor::System::Actors::Root :isa(Acktor) {
             class => 'Acktor::System::Actors::System',
             alias => '//sys'
         ));
+
         $context->spawn( Acktor::Props->new(
             class => 'Acktor::System::Actors::Users',
             alias => '//usr',

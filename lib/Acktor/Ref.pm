@@ -16,7 +16,7 @@ class Acktor::Ref {
     field $logger;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+        $logger = Acktor::Logging->logger("Ref[ ${pid} ]") if LOG_LEVEL;
     }
 
     method set_context ($c) { $context = $c; $self }
@@ -25,7 +25,7 @@ class Acktor::Ref {
     method pid { $pid }
 
     method send ($message) {
-        $logger->log(DEBUG, "> Ref($self)::send($message)" ) if DEBUG;
+        $logger->log(DEBUG, "send($message)" ) if DEBUG;
         $context->send_message( $self, $message );
     }
 

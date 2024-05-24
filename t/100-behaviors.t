@@ -104,10 +104,10 @@ class Actor {
     method apply ($context, $message) {}
 
     # Event handlers for Signals
-    method post_start  ($context) { } # Started
-    method pre_stop    ($context) { } # Stopping
-    method pre_restart ($context) { } # Restarting
-    method post_stop   ($context) { } # Stopped
+    method post_start  ($context) { say sprintf 'Started    %s' => $context->self }
+    method pre_stop    ($context) { say sprintf 'Stopping   %s' => $context->self }
+    method pre_restart ($context) { say sprintf 'Restarting %s' => $context->self }
+    method post_stop   ($context) { say sprintf 'Stopped    %s' => $context->self }
 }
 
 ## ------------------------------------------------------------------
@@ -145,8 +145,10 @@ class Props {
 
     field $class :param;
     field $args  :param = {};
+    field $alias :param = undef;
 
     method class { $class }
+    method alias { $alias }
 
     method new_actor {
         say "++ $self -> new_actor($class)";
@@ -365,15 +367,8 @@ class Mailbox {
 }
 
 ## ------------------------------------------------------------------
-## System
+## System Actors
 ## ------------------------------------------------------------------
-
-class System::Root :isa(Actor) {
-    method post_start  ($context) { say sprintf 'Started    %s' => $context->self }
-    method pre_stop    ($context) { say sprintf 'Stopping   %s' => $context->self }
-    method pre_restart ($context) { say sprintf 'Restarting %s' => $context->self }
-    method post_stop   ($context) { say sprintf 'Stopped    %s' => $context->self }
-}
 
 class DeadLetter {
     field $to      :param;
@@ -383,13 +378,8 @@ class DeadLetter {
     method to_string { sprintf '%s(%03d) (%s)' => $to->context->props->class, $to->pid, "$message" }
 }
 
-class System::DeadLetter :isa(Actor) {
+class System::Actors::DeadLetter :isa(Actor) {
     field @dead_letters;
-
-    method post_start  ($context) { say sprintf 'Started    %s' => $context->self }
-    method pre_stop    ($context) { say sprintf 'Stopping   %s' => $context->self }
-    method pre_restart ($context) { say sprintf 'Restarting %s' => $context->self }
-    method post_stop   ($context) { say sprintf 'Stopped    %s' => $context->self }
 
     method dead_letters { @dead_letters }
 
@@ -399,10 +389,52 @@ class System::DeadLetter :isa(Actor) {
     }
 }
 
+## ------------------------------------------------------------------
+
+class System::Actors::System :isa(Actor) {
+    method post_start  ($context) {
+        say sprintf 'Started    %s' => $context->self;
+        $context->spawn( Props->new(
+            class => 'System::Actors::DeadLetter',
+            alias => '//sys/dead_letters',
+        ));
+    }
+}
+
+class System::Actors::Users :isa(Actor) {
+    field $init :param;
+
+    method post_start  ($context) {
+        say sprintf 'Started    %s' => $context->self;
+        try {
+            say "Running init callback for $context";
+            $init->($context);
+        } catch ($e) {
+            say "!!!!!! Error running init callback for $context with ($e)";
+        }
+    }
+}
+
+## ------------------------------------------------------------------
+
+class System::Root :isa(Actor) {
+    field $init :param;
+
+    method post_start  ($context) {
+        say sprintf 'Started    %s' => $context->self;
+
+        $context->spawn( Props->new( class => 'System::Actors::System', alias => '//sys') );
+        $context->spawn( Props->new( class => 'System::Actors::Users',  alias => '//usr', args => { init => $init }) );
+    }
+}
+
+## ------------------------------------------------------------------
+## System
+## ------------------------------------------------------------------
+
 class System {
 
     field $root;
-    field $dead_letters;
 
     field %lookup;
     field @mailboxes;
@@ -411,6 +443,9 @@ class System {
         say "+++ System::spawn($props)";
         my $mailbox = Mailbox->new( props => $props, system => $self, parent => $parent );
         $lookup{ $mailbox->ref->pid } = $mailbox;
+        if (my $alias = $mailbox->props->alias ) {
+            $lookup{ $alias } = $mailbox;
+        }
         push @mailboxes => $mailbox;
         return $mailbox->ref;
     }
@@ -418,7 +453,10 @@ class System {
     method despawn_actor ($ref) {
         say "+++ System::despawn($ref) for ".$ref->context->props->class ."[".$ref->pid."]";
         if (my $mailbox = $lookup{ $ref->pid }) {
-            $lookup{ $ref->pid } = $lookup{ $dead_letters->pid };
+            $lookup{ $ref->pid } = $lookup{ '//sys/dead_letters' };
+            if (my $alias = $mailbox->props->alias ) {
+                delete $lookup{ $alias };
+            }
             $mailbox->stop;
         }
         else {
@@ -436,11 +474,8 @@ class System {
         }
     }
 
-    method root_context { $root->context }
-
-    method init {
-        $root         = $self->spawn_actor( Props->new( class => 'System::Root')  );
-        $dead_letters = $root->context->spawn( Props->new( class => 'System::DeadLetter') );
+    method init ($init) {
+        $root = $self->spawn_actor( Props->new( class => 'System::Root', alias => '//', args => { init => $init } ) );
         $self;
     }
 
@@ -461,18 +496,16 @@ class System {
         $self->print_actor_tree($root);
     }
 
-    method loop {
+    method loop_until_done {
         say "-- start:loop -----------------------------------------";
         while (1) {
             $self->tick;
 
-            if (scalar @mailboxes == 2 && 0 == grep $_->to_be_run, @mailboxes) {
-                say "[[[[[ ENTERING SHUTDOWN ]]]]]]";
-                $root->context->stop;
-            }
-
-            if (scalar @mailboxes == 1 && 0 == grep $_->to_be_run, @mailboxes) {
-                say "[[[[[ GLOBAL SHUTDOWN ]]]]]]";
+            if (my $usr = $lookup{ '//usr' } ) {
+                if ( $usr->is_alive && !$usr->children ) {
+                    say "/// ENTERING SHUTDOWN ///";
+                    $root->context->stop;
+                }
             }
 
             last unless @mailboxes;
@@ -532,10 +565,10 @@ class Foo :isa(Actor) {
     method post_stop   ($context) { say sprintf 'Stopped    %s' => $context->self }
 }
 
-my $sys = System->new->init;
+my $sys = System->new->init(sub ($context) {
+    $context->spawn( Props->new( class => 'Foo' ) );
+});
 
-my $root = $sys->root_context;
-my $foo = $root->spawn( Props->new( class => 'Foo' ) );
 
-$sys->loop;
+$sys->loop_until_done;
 

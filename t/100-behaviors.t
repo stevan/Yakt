@@ -14,8 +14,14 @@ class Foo :isa(Acktor) {
     field $depth :param = 1;
     field $max   :param = 4;
 
+    my $RESTARTS = 0;
+
     method apply ($context, $message) {
         say "HELLO JOE! => { Actor($self) got $context and message($message) }";
+        if ($message isa Bar) {
+            $RESTARTS++;
+            die "Going to Restart!"
+        }
     }
 
     method post_start  ($context) {
@@ -38,7 +44,12 @@ class Foo :isa(Acktor) {
                  && $x->context->parent->context->props->class eq 'Foo';
 
             # and stop it
-            $x->context->stop;
+            if ($RESTARTS) {
+                $x->context->stop;
+            }
+            else {
+                $x->send( Bar->new );
+            }
         }
     }
 

@@ -10,3 +10,5 @@ use Acktor::Signals::Stopping;
 use Acktor::Signals::Restarting;
 use Acktor::Signals::Stopped;
 use Acktor::Signals::Terminated;
+
+class Actor::Signals {}

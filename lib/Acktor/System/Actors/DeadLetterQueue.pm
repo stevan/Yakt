@@ -16,7 +16,15 @@ class Acktor::System::Actors::DeadLetterQueue::DeadLetter {
 }
 
 class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
+    use Acktor::Logging;
+
     field @dead_letters;
+
+    field $logger;
+
+    ADJUST {
+        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+    }
 
     method dead_letters { @dead_letters }
 
@@ -25,6 +33,6 @@ class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
             to      => $context->self,
             message => $message
         );
-        say "*** DEAD LETTER(".$dead_letters[-1].") ***";
+        $logger->log(WARN, "*** DEAD LETTER(".$dead_letters[-1].") ***" ) if WARN;
     }
 }

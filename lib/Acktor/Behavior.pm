@@ -5,13 +5,21 @@ use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
 class Acktor::Behavior {
+    use Acktor::Logging;
+
+    field $logger;
+
+    ADJUST {
+        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+    }
+
     method receive_message ($actor, $context, $message) {
-        say "<<< Behavior->receive_message(actor($actor), context($context), message($message))";
+        $logger->log(INTERNALS, "<<< Behavior->receive_message(actor($actor), context($context), message($message))" ) if INTERNALS;
         $actor->apply($context, $message);
     }
 
     method receive_signal  ($actor, $context, $signal)  {
-        say "<<< Behavior->receive_signal(actor($actor), context($context), signal($signal))";
+        $logger->log(INTERNALS, "<<< Behavior->receive_signal(actor($actor), context($context), signal($signal))" ) if INTERNALS;
         $actor->apply($context, $signal);
     }
 }

@@ -27,6 +27,8 @@ class Acktor::Mailbox::State {
 }
 
 class Acktor::Mailbox {
+    use Acktor::Logging;
+
     use overload '""' => \&to_string;
 
     field $system :param;
@@ -47,9 +49,13 @@ class Acktor::Mailbox {
     field @messages;
     field @signals;
 
+    field $logger;
+
     my $PID_SEQ = 0;
 
     ADJUST {
+        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+
         $state   = Acktor::Mailbox::State->STARTING;
         $ref     = Acktor::Ref->new( pid => ++$PID_SEQ );
         $context = Acktor::Context->new( ref => $ref, mailbox => $self, system => $system );
@@ -102,12 +108,14 @@ class Acktor::Mailbox {
 
     method tick {
 
+        $logger->line($self->to_string) if DEBUG;
+
         my @sigs = @signals;
         @signals = ();
 
          while (@sigs) {
             my $sig = shift @sigs;
-            say "%% GOT SIGNAL($sig)";
+            $logger->log(INTERNALS, "%% GOT SIGNAL($sig)" ) if INTERNALS;
             try {
                 if ($sig isa Acktor::Signals::Started) {
                     $state = Acktor::Mailbox::State->ALIVE;
@@ -152,7 +160,7 @@ class Acktor::Mailbox {
                     @messages = ();
 
                     if ($parent) {
-                        say "$self is Stopped, notifying $parent";
+                        $logger->log(DEBUG, "$self is Stopped, notifying $parent" ) if DEBUG;
                         $parent->context->notify( Acktor::Signals::Terminated->new( ref => $ref ) );
                     }
                     # and exit
@@ -161,15 +169,15 @@ class Acktor::Mailbox {
                 elsif ($sig isa Acktor::Signals::Terminated) {
                     my $child = $sig->ref;
 
-                    say "$self got TERMINATED($child) while in state(".$Acktor::Mailbox::State::STATES[$state].")";
+                    $logger->log(DEBUG, "$self got TERMINATED($child) while in state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
 
-                    say "CHILDREN: ", join ', ' => @children;
-                    say "BEFORE num children: ".scalar(@children);
+                    $logger->log(INTERNALS, "CHILDREN: ", join ', ' => @children ) if INTERNALS;
+                    $logger->log(INTERNALS, "BEFORE num children: ".scalar(@children) ) if INTERNALS;
                     @children = grep { $_->pid ne $child->pid } @children;
-                    say "AFTER num children: ".scalar(@children);
+                    $logger->log(INTERNALS, "AFTER num children: ".scalar(@children) ) if INTERNALS;
 
                     if (@children == 0) {
-                        say "no more children, resuming state(".$Acktor::Mailbox::State::STATES[$state].")";
+                        $logger->log(DEBUG, "no more children, resuming state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
                         if ($state == Acktor::Mailbox::State->STOPPING) {
                             unshift @signals => Acktor::Signals::Stopped->new;
                         }
@@ -186,7 +194,7 @@ class Acktor::Mailbox {
             } catch ($e) {
                 chomp $e;
                 # XXX - what to do here???
-                say "!!! GOT AN ERROR($e) WHILE PROCESSING SIGNALS!";
+                $logger->log(ERROR, "!!! GOT AN ERROR($e) WHILE PROCESSING SIGNALS!" ) if ERROR;
             }
         }
 
@@ -195,11 +203,28 @@ class Acktor::Mailbox {
         my @msgs  = @messages;
         @messages = ();
 
-        foreach my $msg (@msgs) {
+        while (@msgs) {
+            my $msg = shift @msgs;
             try {
                 $behavior->receive_message($actor, $context, $msg);
             } catch ($e) {
-                $supervisor->supervise( $self, $e );
+                chomp $e;
+
+                my $action = $supervisor->supervise( $self, $e );
+
+                if ($action == $supervisor->RETRY) {
+                    $logger->log(DEBUG, "supervisor said to retry ...") if DEBUG;
+                    unshift @msgs => $msg;
+                }
+                elsif ($action == $supervisor->RESUME) {
+                    $logger->log(DEBUG, "supervisor said to resume (and not retry) ...") if DEBUG;
+                    next;
+                }
+                elsif ($action == $supervisor->HALT) {
+                    $logger->log(DEBUG, "supervisor said to halt ...") if DEBUG;
+                    unshift @messages => @msgs;
+                    last;
+                }
             }
         }
 

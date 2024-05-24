@@ -9,14 +9,21 @@ use Acktor::Props;
 use Acktor::System::Actors::Root;
 
 class Acktor::System {
+    use Acktor::Logging;
 
     field $root;
 
     field %lookup;
     field @mailboxes;
 
+    field $logger;
+
+    ADJUST {
+        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+    }
+
     method spawn_actor ($props, $parent=undef) {
-        say "+++ System::spawn($props)";
+        $logger->log( DEBUG, "spawn($props)" ) if DEBUG;
         my $mailbox = Acktor::Mailbox->new( props => $props, system => $self, parent => $parent );
         $lookup{ $mailbox->ref->pid } = $mailbox;
         if (my $alias = $mailbox->props->alias ) {
@@ -27,7 +34,7 @@ class Acktor::System {
     }
 
     method despawn_actor ($ref) {
-        say "+++ System::despawn($ref) for ".$ref->context->props->class ."[".$ref->pid."]";
+        $logger->log( DEBUG, "despawn($ref) for ".$ref->context->props->class ."[".$ref->pid."]" ) if DEBUG;
         if (my $mailbox = $lookup{ $ref->pid }) {
             $lookup{ $ref->pid } = $lookup{ '//sys/dead_letters' };
             if (my $alias = $mailbox->props->alias ) {
@@ -36,17 +43,17 @@ class Acktor::System {
             $mailbox->stop;
         }
         else {
-            warn "ACTOR NOT FOUND: $ref";
+            $logger->log( ERROR, "ACTOR NOT FOUND: $ref" ) if ERROR;
         }
     }
 
     method enqueue_message ($to, $message) {
-        say ">>> System::enqueue_message to($to) message($message)";
+        $logger->log( DEBUG, "enqueue_message to($to) message($message)" ) if DEBUG;
         if (my $mailbox = $lookup{ $to->pid }) {
             $mailbox->enqueue_message( $message );
         }
         else {
-            die "DEAD LETTERS: $to $message";
+            $logger->log( ERROR, "ACTOR NOT FOUND: $to FOR MESSAGE: $message" ) if ERROR;
         }
     }
 
@@ -62,41 +69,43 @@ class Acktor::System {
     }
 
     method tick {
-        say "-- start:tick -----------------------------------------";
+        $logger->header('begin:tick') if DEBUG;
 
         my @to_run = grep $_->to_be_run, @mailboxes;
 
         foreach my $mailbox ( @to_run  ) {
-            say "~~ BEGIN tick for $mailbox";
             $mailbox->tick;
-            say "~~ END tick for $mailbox";
         }
 
         @mailboxes = grep !$_->is_stopped, @mailboxes;
 
-        say "-- end:tick -------------------------------------------";
-        $self->print_actor_tree($root);
+        $logger->header('end:tick') if DEBUG;
     }
 
     method loop_until_done {
-        say "-- start:loop -----------------------------------------";
+        $logger->line('begin:loop') if DEBUG;
         while (1) {
             $self->tick;
 
+            if (DEBUG) {
+                $logger->line('Acktor Hierarchy') if DEBUG;
+                $self->print_actor_tree($root);
+            }
+
             if (my $usr = $lookup{ '//usr' } ) {
                 if ( $usr->is_alive && !$usr->children ) {
-                    say "/// ENTERING SHUTDOWN ///";
+                    $logger->alert("ENTERING SHUTDOWN") if DEBUG;
                     $root->context->stop;
                 }
             }
 
             last unless @mailboxes;
         }
-        say "-- end:loop -------------------------------------------";
+        $logger->line('end:loop') if DEBUG;
     }
 
     method print_actor_tree ($ref, $indent='') {
-        say sprintf '%s<%s>[%03d]' => $indent, $ref->context->props->class, $ref->pid;
+        $logger->log(DEBUG, sprintf '%s<%s>[%03d]' => $indent, $ref->context->props->class, $ref->pid ) if DEBUG;
         $indent .= '  ';
         foreach my $child ( $ref->context->children ) {
             $self->print_actor_tree( $child, $indent );

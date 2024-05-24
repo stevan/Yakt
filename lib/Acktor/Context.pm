@@ -5,13 +5,19 @@ use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
 class Acktor::Context {
+    use Acktor::Logging;
+
     use overload '""' => \&to_string;
 
     field $ref     :param;
     field $system  :param;
     field $mailbox :param;
 
+    field $logger;
+
     ADJUST {
+        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+
         $ref->set_context( $self );
     }
 
@@ -21,19 +27,19 @@ class Acktor::Context {
     method props    { $mailbox->props    }
 
     method spawn ($props) {
-        say "+ $self -> spawn($props)";
+        $logger->log(DEBUG, "+ $self -> spawn($props)" ) if DEBUG;
         my $child = $system->spawn_actor($props, $ref);
         $mailbox->add_child( $child );
         return $child;
     }
 
     method send_message ($to, $message) {
-        say ">> $self -> send_message($to, $message)";
+        $logger->log(DEBUG, ">> $self -> send_message($to, $message)" ) if DEBUG;
         $system->enqueue_message( $to, $message );
     }
 
     method stop {
-        say ">> $self -> stop($ref)[".$ref->pid."]";
+        $logger->log(DEBUG, ">> $self -> stop($ref)[".$ref->pid."]" ) if DEBUG;
         $system->despawn_actor( $ref );
     }
 

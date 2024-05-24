@@ -8,17 +8,25 @@ use Acktor::Supervisors;
 use Acktor::Behavior;
 
 class Acktor::Props {
+    use Acktor::Logging;
+
     use overload '""' => \&to_string;
 
     field $class :param;
     field $args  :param = {};
     field $alias :param = undef;
 
+    field $logger;
+
+    ADJUST {
+        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+    }
+
     method class { $class }
     method alias { $alias }
 
     method new_actor {
-        say "++ $self -> new_actor($class)";
+        $logger->log(DEBUG, "++ $self -> new_actor($class)" ) if DEBUG;
         $class->new( %$args )
     }
 

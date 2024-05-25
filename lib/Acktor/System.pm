@@ -6,6 +6,7 @@ use builtin      qw[ blessed refaddr true false ];
 
 use Acktor::Mailbox;
 use Acktor::Props;
+use Acktor::System::Timers;
 use Acktor::System::Actors::Root;
 
 class Acktor::System {
@@ -16,10 +17,30 @@ class Acktor::System {
     field %lookup;
     field @mailboxes;
 
+    field $timers;
+
     field $logger;
 
     ADJUST {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+        $timers = Acktor::System::Timers->new;
+    }
+
+
+    method schedule_timer (%options) {
+        my $timeout  = $options{after};
+        my $callback = $options{callback};
+
+        $logger->log( DEBUG, "schedule( $timeout, $callback )" ) if DEBUG;
+
+        my $timer = Acktor::Timer->new(
+            timeout  => $timeout,
+            callback => $callback,
+        );
+
+        $timers->schedule_timer($timer);
+
+        return $timer;
     }
 
     method spawn_actor ($props, $parent=undef) {
@@ -69,17 +90,34 @@ class Acktor::System {
     }
 
     method tick {
-        $logger->header('begin:tick') if DEBUG;
+        state $TICK = 0;
+        $logger->header('begin:tick['.$TICK.']') if DEBUG;
+
+       if ($timers->has_timers) {
+            $logger->line( "begin:timers" ) if DEBUG;
+            $timers->tick;
+            $logger->line( "end:timers" ) if DEBUG;
+        }
 
         my @to_run = grep $_->to_be_run, @mailboxes;
 
-        foreach my $mailbox ( @to_run  ) {
-            $mailbox->tick;
+        if (@to_run) {
+            # run all the mailboxes ...
+            $_->tick foreach @to_run;
+            # remove the stopped ones
+            @mailboxes = grep !$_->is_stopped, @mailboxes;
+        }
+        else {
+            # otherwise check for timers ...
+            $logger->log( WARN, "... nothing to run" ) if WARN;
+            if (my $wait = $timers->should_wait) {
+                $logger->log( WARN, "... waiting ($wait)" ) if WARN;
+                $timers->sleep( $wait );
+            }
         }
 
-        @mailboxes = grep !$_->is_stopped, @mailboxes;
-
-        $logger->header('end:tick') if DEBUG;
+        $logger->header('end:tick['.$TICK.']') if DEBUG;
+        $TICK++;
     }
 
     method loop_until_done {
@@ -91,6 +129,8 @@ class Acktor::System {
                 $logger->line('Acktor Hierarchy') if DEBUG;
                 $self->print_actor_tree($root);
             }
+
+            next if $timers->has_timers;
 
             if (my $usr = $lookup{ '//usr' } ) {
                 if ( $usr->is_alive && !$usr->children ) {

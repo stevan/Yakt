@@ -38,6 +38,8 @@ class Acktor::Context {
         $system->enqueue_message( $to, $message );
     }
 
+    method schedule (%options) { $system->schedule_timer( %options ) }
+
     method stop {
         $logger->log(DEBUG, "stop($ref)[".$ref->pid."]" ) if DEBUG;
         $system->despawn_actor( $ref );

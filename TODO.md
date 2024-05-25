@@ -1,174 +1,22 @@
 # TODO
 
-
-## Behaviors
-
-The method Akka uses with different wrappers for the behaviors
-is interesting and would simplify the Mailbox perhaps.
-
-
-- SameBehavior
-    - return the same thing
-
-- UnhandledBehavior
-- StoppedBehavior
-    - the actor has been sopped
-- EmptyBehavior
-- IgnoreBehavior
-- FailedBehavior
-    - the actor failed for some reason
-
-- DeferredBehavior
-    - this is used for Setup??
-
-
-
-
 ## Address
+
+- Re-add these ...
 
 - don't do `0002@localhost:3000/foo/bar`
     - do `localhost:3000/foo/bar/2`
     - it is more REST appropriate and conveys the relationships better
         - i.e. - instance PID(2) of the `/foo/bar` actor
 
-## Mailbox
-
-- add `Terminated` signals
-    - sent to watchers if `Stopped`
-
-- should parent/child stuff be in Mailbox? or stay in Context?
-    - this is mostly a question because of controlled destruction
-        - parents need to wait for children to stop before stopping
-          this will be handled by sending `->stop` to all children and
-          then collecting all the `Terminated` signals from those children
-          after which point the parent can stop
-    - what role do Supervisors play in this?
-        - Do we need an `Escalate` signals to say "let me parent supervise me"?
-            - how does this work anyway????
-    - can this be accomplished with a more generic `watcher` or `monitor` feature?
-        - does the Mailbox need to know about the heirarchy?
-        - if parents `watch/monitor` their children, is that enough?
-
-
 ## Messages
 
 - make all messages be able to stringify and desctructure-able
-
-## System
-
-- System needs to note the currently executing context
-    - and make it available to others
 
 ## Supervisors
 
 - Supervisors need to be configurable for given errors
     - some kind of error dispatch table (`match`)
-
-
-<!---------------------------------------------------------------->
-
-
-
-## Concepts
-
-### User Level
-
-- Actor
-
-This is user written code, and includes access to a Behavior instance.
-
-An Actor has two APIs, the first is the actor's syncronous API which
-is defined by it's methods, as with normal OOP; the second is the
-Actor's Behavior, which provides the asycnronous API.
-
-The Actor is a managed object, which means that it is not possible to
-have direct access to this object, outside if your class definition.
-This means that all calls much come via the asyncronous API of the
-Behavior, whose code can then call the syncronous methods of the Actor.
-
-- Behavior
-
-This is system code, but is configured via the user code written in the Actor.
-
-* It contains the message callbacks which are the asyncronous API to this class.
-* The asyncronous API can only be called by sending a message through the System.
-
-The Behavior is created via the Actor code, but should be considered to be a
-static value associated with the Actor's class. Meaning that we should have the
-same number of Behavior instances as we have types of Actors
-
-### External System Level
-
-- Ref
-
-This is a reference to an Actor instance and is the means by which we can asyncronously
-communicate with that Actor instance.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Lifecycle
-
-https://proto.actor/docs/images/actorlifecycle.png
-
-There are two sides to this coin:
-
-1) The signals which are sent, by the system, to the Mailbox, to control the Actor
-2) The methods on the actor which are called by the Mailbox in response to it processing signals
-
-### Lifecycle States
-
-- Started
-    - the actor has been started but not done any work yet
-
-- Alive
-    - the actor is available for messages
-
-- Stopping
-    - the actor shutting down and is about to be stopped
-
-- Restarting
-    - the actor shutting down and is about to be restarted
-
-- Stopped
-    - the actor has been fully shutdown and will be removed
-
-### Failure
-
-When an actor throws an error processing a message, the following happens:
-
-- Mailbox is suspended
-    - NOTE: steal this from Acktor
-
-- Mailbox applies the actor supervision strategy
-    - Resume
-        - just retry the message and keep going
-    - Stop
-        - immediately send the Stopping signal to Actor to process
-        - NOTE: before final deactivation, the Stopped signal will be sent and Mailbox destroyed
-    - Restart
-        - immediately send the Restarting signal to Actor to process
-        - once this has been processed, Mailbox restarts the actor
-            - and sends the Started message to the Actor
 
 ## Perl Stuff
 
@@ -181,7 +29,6 @@ Also check out https://metacpan.org/pod/strictures#VERSION-2 for this as well.
 
 
 ## Syntax Sketch
-
 
 ```ruby
 

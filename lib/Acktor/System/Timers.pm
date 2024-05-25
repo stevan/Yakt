@@ -6,10 +6,11 @@ use builtin      qw[ blessed refaddr true false ];
 
 use Time::HiRes;
 
-use Acktor::Timer;
-
 class Acktor::System::Timers {
     use Acktor::Logging;
+
+    our $TIMER_PRECISION_DECIMAL = 0.001;
+    our $TIMER_PRECISION_INT     = 1000;
 
     field $time;
     field @timers;
@@ -32,10 +33,18 @@ class Acktor::System::Timers {
         Time::HiRes::sleep( $duration );
     }
 
+    method calculate_end_time ($timer) {
+        my $now      = $self->now;
+        my $end_time = $now + $timer->timeout;
+           $end_time = int($end_time * $TIMER_PRECISION_INT) * $TIMER_PRECISION_DECIMAL;
+
+        return $end_time;
+    }
+
     method schedule_timer ($timer) {
 
         # XXX - should this use $time, or should it call ->now to update?
-        my $end_time = $timer->calculate_end_time($self->now);
+        my $end_time = $self->calculate_end_time($timer);
 
         if ( scalar @timers == 0 ) {
             # fast track the first one ...
@@ -98,7 +107,7 @@ class Acktor::System::Timers {
         }
 
         # do not wait for negative values ...
-        if ($wait < $Acktor::Timer::TIMER_PRECISION_DECIMAL) {
+        if ($wait < $TIMER_PRECISION_DECIMAL) {
             $wait = 0;
         }
 

@@ -16,13 +16,13 @@ class Acktor {
     method logger { $logger }
 
     method apply ($context, $message) {
-        $logger->log( WARN, "Unhandled message! $context => $message" ) if WARN;
+        $self->logger->log( WARN, "Unhandled message! $context => $message" ) if WARN;
     }
 
     # Event handlers for Signals
-    method post_start  ($context) { $logger->log( DEBUG, sprintf    'Started %s' => $context->self ) if DEBUG }
-    method pre_stop    ($context) { $logger->log( DEBUG, sprintf   'Stopping %s' => $context->self ) if DEBUG }
-    method pre_restart ($context) { $logger->log( DEBUG, sprintf 'Restarting %s' => $context->self ) if DEBUG }
-    method post_stop   ($context) { $logger->log( DEBUG, sprintf    'Stopped %s' => $context->self ) if DEBUG }
+    method post_start  ($context) { $self->logger->log( DEBUG, sprintf    'Started %s' => $context->self ) if DEBUG }
+    method pre_stop    ($context) { $self->logger->log( DEBUG, sprintf   'Stopping %s' => $context->self ) if DEBUG }
+    method pre_restart ($context) { $self->logger->log( DEBUG, sprintf 'Restarting %s' => $context->self ) if DEBUG }
+    method post_stop   ($context) { $self->logger->log( DEBUG, sprintf    'Stopped %s' => $context->self ) if DEBUG }
 }
 

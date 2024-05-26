@@ -64,7 +64,7 @@ class Foo :isa(Acktor) {
 
     method pre_stop    ($context) {
         $STOPPING++;
-        $self->logger->log( INFO, sprintf   'Stopping %s' => $context->self ) if INFO
+        $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
     }
     method pre_restart ($context) {
         $RESTARTED++;
@@ -72,7 +72,7 @@ class Foo :isa(Acktor) {
     }
     method post_stop   ($context) {
         $STOPPED++;
-        $self->logger->log( INFO, sprintf    'Stopped %s' => $context->self ) if INFO
+        $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
     }
 }
 

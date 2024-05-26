@@ -16,7 +16,7 @@
 ## Supervisors
 
 - Supervisors need to be configurable for given errors
-    - some kind of error dispatch table (`match`)
+    - some kind of error dispatch table (`match`)I a
 
 ## Perl Stuff
 

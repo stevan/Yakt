@@ -124,6 +124,7 @@ class Acktor::System {
     method loop_until_done {
         $logger->line('begin:loop') if DEBUG;
         while (1) {
+            # tick ...
             $self->tick;
 
             if (DEBUG) {
@@ -131,22 +132,31 @@ class Acktor::System {
                 $self->print_actor_tree($root);
             }
 
+            # if we have timers, then loop again ...
             next if $timers->has_timers;
 
+            # if no timers, see if we have active children ...
             if (my $usr = $lookup{ '//usr' } ) {
                 if ( $usr->is_alive && !$usr->children ) {
+                    # and if not, then we can shutdown ...
                     $logger->alert("ENTERING SHUTDOWN") if DEBUG;
                     $root->context->stop;
                 }
             }
 
+            # only after shutdown will we have no more
+            # mailboxes, at which point we exit the loop
             last unless @mailboxes;
         }
         $logger->line('end:loop') if DEBUG;
     }
 
     method print_actor_tree ($ref, $indent='') {
-        $logger->log(DEBUG, sprintf '%s<%s>[%03d]' => $indent, $ref->context->props->class, $ref->pid ) if DEBUG;
+        if (refaddr $ref == refaddr $root && $ref->context->is_stopped) {
+            $logger->log(DEBUG, 'No Active Actors' ) if DEBUG;
+        } else {
+            $logger->log(DEBUG, sprintf '%s<%s>[%03d]' => $indent, $ref->context->props->class, $ref->pid ) if DEBUG;
+        }
         $indent .= '  ';
         foreach my $child ( $ref->context->children ) {
             $self->print_actor_tree( $child, $indent );

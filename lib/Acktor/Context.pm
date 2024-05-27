@@ -26,6 +26,9 @@ class Acktor::Context {
     method children { $mailbox->children }
     method props    { $mailbox->props    }
 
+    method is_stopped { $mailbox->is_stopped }
+    method is_alive   { $mailbox->is_alive   }
+
     method spawn ($props) {
         $logger->log(DEBUG, "spawn($props)" ) if DEBUG;
         my $child = $system->spawn_actor($props, $ref);

@@ -111,9 +111,9 @@ class Acktor::System {
         else {
             # otherwise check for timers ...
             $logger->log( WARN, "... nothing to run" ) if WARN;
-            if (my $wait = $timers->should_wait) {
-                $logger->log( WARN, "... waiting ($wait)" ) if WARN;
-                $timers->sleep( $wait );
+            if (my $wait_for = $timers->should_wait) {
+                $logger->log( WARN, "... waiting ($wait_for)" ) if WARN;
+                $timers->wait( $wait_for );
             }
         }
 

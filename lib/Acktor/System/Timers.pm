@@ -29,7 +29,7 @@ class Acktor::System::Timers {
         $time = Time::HiRes::clock_gettime( $MONOTONIC );
     }
 
-    method sleep ($duration) {
+    method wait ($duration) {
         Time::HiRes::sleep( $duration );
     }
 

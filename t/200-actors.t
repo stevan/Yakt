@@ -21,7 +21,7 @@ class Joe :isa(Acktor) {
 
     method apply ($context, $message) {
         $MESSAGED++;
-        $self->logger->log(INFO, "HELLO JOE! => { Actor($self) got $context and message($message) }" ) if INFO;
+        $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
         $context->stop;
     }
 

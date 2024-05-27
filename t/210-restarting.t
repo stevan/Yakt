@@ -27,14 +27,14 @@ class Joe :isa(Acktor) {
 
     method apply ($context, $message) {
         $MESSAGED++;
-        $self->logger->log(INFO, "HELLO JOE! => { Actor($self) got $context and message($message) }" ) if INFO;
-        $self->logger->log(INFO, "HELLO JOE! called ". $message->total ." times") if INFO;
+        $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
+        $self->logger->log(INFO, "... called ". $message->total ." times") if INFO;
         if ($RESTARTED < 5) {
             $context->self->send($message->count);
             die 'OH NOES!';
         }
         else {
-            $self->logger->log(INFO, "Final! called ". $message->total ." times") if INFO;
+            $self->logger->log(INFO, "!!! max restarts, ... stopping". $message->total ." times") if INFO;
             $TOTAL_HELLO = $message->total;
             $context->stop;
         }

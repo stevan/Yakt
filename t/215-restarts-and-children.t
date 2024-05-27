@@ -25,7 +25,7 @@ class Foo :isa(Acktor) {
     );
 
     method apply ($context, $message) {
-        $self->logger->log(INFO, "HELLO JOE! => { Actor($self) got $context and message($message) }" ) if INFO;
+        $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
         if ($message isa Bar) {
             $FORCED_RESTART++;
             die "Going to Restart!"
@@ -45,6 +45,7 @@ class Foo :isa(Acktor) {
             ));
         }
         else {
+            # FIXME - do this better, its clumsy
             # find the topmost Foo
             my $x = $context->self;
             do {

@@ -12,9 +12,11 @@ class Acktor::Props {
 
     use overload '""' => \&to_string;
 
-    field $class :param;
-    field $args  :param = {};
-    field $alias :param = undef;
+    field $class      :param;
+    field $args       :param = {};
+    field $alias      :param = undef;
+    field $supervisor :param = undef;
+    field $behavior   :param = undef;
 
     field $logger;
 
@@ -25,13 +27,16 @@ class Acktor::Props {
     method class { $class }
     method alias { $alias }
 
+    method with_supervisor ($s) { $supervisor = $s; $self }
+    method with_behavior   ($b) { $behavior   = $b; $self }
+
     method new_actor {
         $logger->log(DEBUG, "++ $self -> new_actor($class)" ) if DEBUG;
         $class->new( %$args )
     }
 
-    method new_supervisor { Acktor::Supervisors::Restart->new }
-    method new_behavior   { Acktor::Behavior->new }
+    method new_supervisor { $supervisor //= Acktor::Supervisors::Stop->new }
+    method new_behavior   { $behavior   //= Acktor::Behavior->new          }
 
     method to_string { "Props[$class]" }
 }

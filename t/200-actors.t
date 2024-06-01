@@ -19,30 +19,30 @@ class Joe :isa(Acktor) {
     our $STOPPING   = 0;
     our $STOPPED    = 0;
 
+    method signal ($context, $signal) {
+        if ($signal isa Acktor::Signals::Started) {
+            $STARTED++;
+            $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
+        } elsif ($signal isa Acktor::Signals::Stopping) {
+            $STOPPING++;
+            $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
+        } elsif ($signal isa Acktor::Signals::Restarting) {
+            $RESTARTED++;
+            $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
+        } elsif ($signal isa Acktor::Signals::Stopped) {
+            $STOPPED++;
+            $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
+        }
+    }
+
     method apply ($context, $message) {
-        $MESSAGED++;
-        $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
-        $context->stop;
-    }
-
-    method post_start ($context) {
-        $STARTED++;
-        $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
-    }
-
-    method pre_stop ($context) {
-        $STOPPING++;
-        $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
-    }
-
-    method pre_restart ($context) {
-        $RESTARTED++;
-        $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
-    }
-
-    method post_stop ($context) {
-        $STOPPED++;
-        $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
+        if ($message isa Hello) {
+            $MESSAGED++;
+            $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
+            $context->stop;
+        } else {
+            die "Unknown Message: $message";
+        }
     }
 }
 

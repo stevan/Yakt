@@ -18,11 +18,13 @@ class Acktor::System::Actors::System :isa(Acktor) {
     }
 
 
-    method post_start  ($context) {
-        $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
-        $context->spawn( Acktor::Props->new(
-            class => 'Acktor::System::Actors::DeadLetterQueue',
-            alias => '//sys/dead_letters',
-        ));
+    method signal ($context, $signal) {
+        if ($signal isa Acktor::Signals::Started) {
+            $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
+            $context->spawn( Acktor::Props->new(
+                class => 'Acktor::System::Actors::DeadLetterQueue',
+                alias => '//sys/dead_letters',
+            ));
+        }
     }
 }

@@ -32,49 +32,48 @@ class Foo :isa(Acktor) {
         }
     }
 
-    method post_start  ($context) {
-        $STARTED++;
-        $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
-        if ( $depth <= $max ) {
-            $context->spawn(Acktor::Props->new(
-                class => 'Foo',
-                args => {
-                    depth => $depth + 1,
-                    max   => $max
-                }
-            ));
-        }
-        else {
-            # FIXME - do this better, its clumsy
-            # find the topmost Foo
-            my $x = $context->self;
-            do {
-                $x = $x->context->parent;
-            } while $x->context->parent
-                 && $x->context->parent->context->props->class eq 'Foo';
-
-            # and stop it
-            if ($FORCED_RESTART) {
-                $x->context->stop;
+    method signal ($context, $signal) {
+        if ($signal isa Acktor::Signals::Started) {
+            $STARTED++;
+            $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
+            if ( $depth <= $max ) {
+                $context->spawn(Acktor::Props->new(
+                    class => 'Foo',
+                    args => {
+                        depth => $depth + 1,
+                        max   => $max
+                    }
+                ));
             }
             else {
-                $x->send( Bar->new );
+                # FIXME - do this better, its clumsy
+                # find the topmost Foo
+                my $x = $context->self;
+                do {
+                    $x = $x->context->parent;
+                } while $x->context->parent
+                     && $x->context->parent->context->props->class eq 'Foo';
+
+                # and stop it
+                if ($FORCED_RESTART) {
+                    $x->context->stop;
+                }
+                else {
+                    $x->send( Bar->new );
+                }
             }
+        } elsif ($signal isa Acktor::Signals::Stopping) {
+            $STOPPING++;
+            $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
+        } elsif ($signal isa Acktor::Signals::Restarting) {
+            $RESTARTED++;
+            $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
+        } elsif ($signal isa Acktor::Signals::Stopped) {
+            $STOPPED++;
+            $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
         }
     }
 
-    method pre_stop    ($context) {
-        $STOPPING++;
-        $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
-    }
-    method pre_restart ($context) {
-        $RESTARTED++;
-        $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
-    }
-    method post_stop   ($context) {
-        $STOPPED++;
-        $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
-    }
 }
 
 my $sys = Acktor::System->new->init(sub ($context) {

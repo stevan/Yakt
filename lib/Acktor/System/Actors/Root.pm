@@ -20,18 +20,20 @@ class Acktor::System::Actors::Root :isa(Acktor) {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
     }
 
-    method post_start  ($context) {
-        $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
+    method signal ($context, $signal) {
+        if ($signal isa Acktor::Signals::Started) {
+            $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
 
-        $context->spawn( Acktor::Props->new(
-            class => 'Acktor::System::Actors::System',
-            alias => '//sys'
-        ));
+            $context->spawn( Acktor::Props->new(
+                class => 'Acktor::System::Actors::System',
+                alias => '//sys'
+            ));
 
-        $context->spawn( Acktor::Props->new(
-            class => 'Acktor::System::Actors::Users',
-            alias => '//usr',
-            args  => { init => $init }
-        ));
+            $context->spawn( Acktor::Props->new(
+                class => 'Acktor::System::Actors::Users',
+                alias => '//usr',
+                args  => { init => $init }
+            ));
+        }
     }
 }

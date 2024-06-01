@@ -20,6 +20,6 @@ class Acktor::Behavior {
 
     method receive_signal  ($actor, $context, $signal)  {
         $logger->log(INTERNALS, "receive_signal(actor($actor), context($context), signal($signal))" ) if INTERNALS;
-        $actor->apply($context, $signal);
+        $actor->signal($context, $signal);
     }
 }

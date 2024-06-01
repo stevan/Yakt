@@ -17,13 +17,15 @@ class Acktor::System::Actors::Users :isa(Acktor) {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
     }
 
-    method post_start  ($context) {
-        $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
-        try {
-            $logger->log(INTERNALS, "Running init callback for $context" ) if INTERNALS;
-            $init->($context);
-        } catch ($e) {
-            $logger->log(ERROR, "!!!!!! Error running init callback for $context with ($e)" ) if ERROR;
+    method signal ($context, $signal) {
+        if ($signal isa Acktor::Signals::Started) {
+            $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
+            try {
+                $logger->log(INTERNALS, "Running init callback for $context" ) if INTERNALS;
+                $init->($context);
+            } catch ($e) {
+                $logger->log(ERROR, "!!!!!! Error running init callback for $context with ($e)" ) if ERROR;
+            }
         }
     }
 }

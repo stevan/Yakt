@@ -116,85 +116,85 @@ class Acktor::Mailbox {
          while (@sigs) {
             my $sig = shift @sigs;
             $logger->log(INTERNALS, "%% GOT SIGNAL($sig)" ) if INTERNALS;
+
+            if ($sig isa Acktor::Signals::Started) {
+                $state = Acktor::Mailbox::State->ALIVE;
+                $actor = $props->new_actor;
+            }
+
             try {
-                if ($sig isa Acktor::Signals::Started) {
-                    $state = Acktor::Mailbox::State->ALIVE;
-                    $actor = $props->new_actor;
-                    $actor->post_start( $context );
-                }
-                elsif ($sig isa Acktor::Signals::Stopping) {
-                    $actor->pre_stop( $context );
-                    if ( @children ) {
-                        # wait for the children
-                        $state = Acktor::Mailbox::State->STOPPING;
-                        $_->context->stop foreach @children;
-                    } else {
-                        # if there are no children then
-                        # make sure Stopped is the next
-                        # thing processed
-                        unshift @signals => Acktor::Signals::Stopped->new;
-                        last;
-                    }
-                }
-                elsif ($sig isa Acktor::Signals::Restarting) {
-                    $actor->pre_restart( $context );
-                    if ( @children ) {
-                        # wait for the children
-                        $state = Acktor::Mailbox::State->RESTARTING;
-                        $_->context->stop foreach @children;
-                    } else {
-                        # if there are no children then
-                        # restart the actor and make sure
-                        # Started is the next signal
-                        # that is processed
-                        unshift @signals => Acktor::Signals::Started->new;
-                        last;
-                    }
-                }
-                elsif ($sig isa Acktor::Signals::Stopped) {
-                    # ... what to do here
-                    $actor->post_stop( $context );
-                    $state = Acktor::Mailbox::State->STOPPED;
-                    # we can destruct the mailbox here
-                    $actor    = undef;
-                    @messages = ();
-
-                    if ($parent) {
-                        $logger->log(DEBUG, "$self is Stopped, notifying $parent" ) if DEBUG;
-                        $parent->context->notify( Acktor::Signals::Terminated->new( ref => $ref ) );
-                    }
-                    # and exit
-                    last;
-                }
-                elsif ($sig isa Acktor::Signals::Terminated) {
-                    my $child = $sig->ref;
-
-                    $logger->log(DEBUG, "$self got TERMINATED($child) while in state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
-
-                    $logger->log(INTERNALS, "CHILDREN: ", join ', ' => @children ) if INTERNALS;
-                    $logger->log(INTERNALS, "BEFORE num children: ".scalar(@children) ) if INTERNALS;
-                    @children = grep { $_->pid ne $child->pid } @children;
-                    $logger->log(INTERNALS, "AFTER num children: ".scalar(@children) ) if INTERNALS;
-
-                    if (@children == 0) {
-                        $logger->log(DEBUG, "no more children, resuming state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
-                        if ($state == Acktor::Mailbox::State->STOPPING) {
-                            unshift @signals => Acktor::Signals::Stopped->new;
-                        }
-                        elsif ($state == Acktor::Mailbox::State->RESTARTING) {
-                            unshift @signals => Acktor::Signals::Started->new;
-                        }
-
-                        last;
-                    }
-                }
-                else {
-                    $behavior->receive_signal($actor, $context, $sig);
-                }
+                $behavior->receive_signal($actor, $context, $sig);
             } catch ($e) {
                 chomp $e;
                 # XXX - what to do here???
                 $logger->log(ERROR, "!!! GOT AN ERROR($e) WHILE PROCESSING SIGNALS!" ) if ERROR;
+            }
+
+            if ($sig isa Acktor::Signals::Stopping) {
+                if ( @children ) {
+                    # wait for the children
+                    $state = Acktor::Mailbox::State->STOPPING;
+                    $_->context->stop foreach @children;
+                } else {
+                    # if there are no children then
+                    # make sure Stopped is the next
+                    # thing processed
+                    unshift @signals => Acktor::Signals::Stopped->new;
+                    last;
+                }
+            }
+            elsif ($sig isa Acktor::Signals::Restarting) {
+                if ( @children ) {
+                    # wait for the children
+                    $state = Acktor::Mailbox::State->RESTARTING;
+                    $_->context->stop foreach @children;
+                } else {
+                    # if there are no children then
+                    # restart the actor and make sure
+                    # Started is the next signal
+                    # that is processed
+                    unshift @signals => Acktor::Signals::Started->new;
+                    last;
+                }
+            }
+            elsif ($sig isa Acktor::Signals::Stopped) {
+                # ... what to do here
+                $state = Acktor::Mailbox::State->STOPPED;
+                # we can destruct the mailbox here
+                $actor    = undef;
+                @messages = ();
+
+                if ($parent) {
+                    $logger->log(DEBUG, "$self is Stopped, notifying $parent" ) if DEBUG;
+                    $parent->context->notify( Acktor::Signals::Terminated->new( ref => $ref ) );
+                }
+                # and exit
+                last;
+            }
+            elsif ($sig isa Acktor::Signals::Terminated) {
+                my $child = $sig->ref;
+
+                $logger->log(DEBUG, "$self got TERMINATED($child) while in state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
+
+                $logger->log(INTERNALS, "CHILDREN: ", join ', ' => @children ) if INTERNALS;
+                $logger->log(INTERNALS, "BEFORE num children: ".scalar(@children) ) if INTERNALS;
+                @children = grep { $_->pid ne $child->pid } @children;
+                $logger->log(INTERNALS, "AFTER num children: ".scalar(@children) ) if INTERNALS;
+
+                # TODO: the logic here needs some testing
+                # I am not 100% sure it is correct.
+                if (@children == 0) {
+                    $logger->log(DEBUG, "no more children, resuming state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
+                    if ($state == Acktor::Mailbox::State->STOPPING) {
+                        unshift @signals => Acktor::Signals::Stopped->new;
+                        last;
+                    }
+                    elsif ($state == Acktor::Mailbox::State->RESTARTING) {
+                        unshift @signals => Acktor::Signals::Started->new;
+                        last;
+                    }
+                    # otherwise just keep on going ...
+                }
             }
         }
 

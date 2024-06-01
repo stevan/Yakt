@@ -40,7 +40,7 @@ class Acktor::System::IO {
         unless (@to_watch) {
             if ($timeout) {
                 $logger->log( DEBUG, "... nothing to watch, waiting($timeout)" ) if DEBUG;
-                IO::Select::select($timeout);
+                IO::Select::select(undef, undef, undef, $timeout);
             }
             else {
                 $logger->log( DEBUG, "... nothing to watch, looping" ) if DEBUG;

@@ -101,8 +101,8 @@ class Google :isa(Acktor) {
 
 my $sys = Acktor::System->new->init(sub ($context) {
     my $g1 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
-    my $g2 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
-    my $g3 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
+    #my $g2 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
+    #my $g3 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
 });
 
 $sys->loop_until_done;

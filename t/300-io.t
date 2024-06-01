@@ -57,6 +57,7 @@ class Google :isa(Acktor) {
 
             $watcher->is_reading = false;
             $timeout->cancel;
+            $watcher->fh->close;
 
             $SUCCESS++;
 
@@ -84,7 +85,7 @@ class Google :isa(Acktor) {
 }
 
 my $sys = Acktor::System->new->init(sub ($context) {
-    my $google = $context->spawn( Acktor::Props->new( class => 'Google' ) );
+    my $g = $context->spawn( Acktor::Props->new( class => 'Google' ) );
 });
 
 $sys->loop_until_done;

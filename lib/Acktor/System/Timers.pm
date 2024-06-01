@@ -114,27 +114,44 @@ class Acktor::System::Timers {
         return $wait;
     }
 
+    method pending_timers {
+        my $now = $self->now;
+
+        my @t;
+        while (@timers && $timers[0]->[0] <= $now) {
+            push @t => shift @timers;
+        }
+
+        return @t;
+    }
+
+    method execute_timer ($timer) {
+        while ( $timer->[1]->@* ) {
+            my $t = shift $timer->[1]->@*;
+            next if $t->cancelled; # skip if the timer has been cancelled
+            try {
+                $t->callback->();
+            } catch ($e) {
+                $logger->log( ERROR, "Timer callback failed ($timer) because: $e" ) if ERROR;
+            }
+        }
+    }
+
     method tick {
-        $logger->log( DEBUG, "tick for Timers" ) if DEBUG;
+        $logger->line( "begin:timers" ) if DEBUG;
 
         return unless @timers;
 
-        my $now = $self->now;
+        my @timers_to_run = $self->pending_timers;
+        return unless @timers_to_run;
 
         $logger->log( DEBUG, "Got timers to check ... ".scalar @timers) if DEBUG;
-        while (@timers && $timers[0]->[0] <= $now) {
-            $logger->log( DEBUG, "Running timers ($now) ...") if DEBUG;
-            my $timer = shift @timers;
-            while ( $timer->[1]->@* ) {
-                my $t = shift $timer->[1]->@*;
-                next if $t->cancelled; # skip if the timer has been cancelled
-                try {
-                    $t->callback->();
-                } catch ($e) {
-                    $logger->log( ERROR, "Timer callback failed ($timer) because: $e" ) if ERROR;
-                }
-            }
+        foreach my $timer ( @timers_to_run ) {
+            $logger->log( DEBUG, "Running timers ($time) ...") if DEBUG;
+            $self->execute_timer( $timer );
         }
+
+        $logger->line( "end:timers" ) if DEBUG;
     }
 
 }

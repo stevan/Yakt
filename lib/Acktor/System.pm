@@ -90,31 +90,34 @@ class Acktor::System {
         $self;
     }
 
-    method tick {
-        state $TICK = 0;
-        $logger->header('begin:tick['.$TICK.']') if DEBUG;
-
-       if ($timers->has_timers) {
-            $logger->line( "begin:timers" ) if DEBUG;
-            $timers->tick;
-            $logger->line( "end:timers" ) if DEBUG;
-        }
-
+    method run_mailboxes {
         my @to_run = grep $_->to_be_run, @mailboxes;
 
         if (@to_run) {
+            $logger->log( WARN, "... running (".scalar(@to_run).") mailboxe(s)" ) if WARN;
             # run all the mailboxes ...
             $_->tick foreach @to_run;
             # remove the stopped ones
             @mailboxes = grep !$_->is_stopped, @mailboxes;
         }
         else {
-            # otherwise check for timers ...
             $logger->log( WARN, "... nothing to run" ) if WARN;
-            if (my $wait_for = $timers->should_wait) {
-                $logger->log( WARN, "... waiting ($wait_for)" ) if WARN;
-                $timers->wait( $wait_for );
-            }
+        }
+    }
+
+    method tick {
+        state $TICK = 0;
+        $logger->header('begin:tick['.$TICK.']') if DEBUG;
+
+        # timers
+        $timers->tick;
+        # mailboxes
+        $self->run_mailboxes;
+
+        # ... check to see if we should wait
+        if (my $wait_for = $timers->should_wait) {
+            $logger->log( WARN, "... waiting ($wait_for)" ) if WARN;
+            $timers->wait( $wait_for );
         }
 
         $logger->header('end:tick['.$TICK.']') if DEBUG;

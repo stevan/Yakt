@@ -11,6 +11,8 @@ use ok 'Acktor::System';
 class Hello {
     field $count = 0;
 
+    ADJUST { $count++ }
+
     method count { $count++; $self }
     method total { $count }
 }
@@ -76,7 +78,7 @@ is($Joe::RESTARTED,   5, '... got the expected restarted');
 is($Joe::STARTED,     6, '... got the expected started');
 is($Joe::STOPPING,    1, '... got the expected stopping');
 is($Joe::STOPPED,     1, '... got the expected stopped');
-is($Joe::TOTAL_HELLO, 5, '... got the expected Hello->total');
+is($Joe::TOTAL_HELLO, 6, '... got the expected Hello->total');
 
 done_testing;
 

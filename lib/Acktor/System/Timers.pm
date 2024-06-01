@@ -21,7 +21,7 @@ class Acktor::System::Timers {
         $logger = Acktor::Logging->logger('System::Timers') if LOG_LEVEL;
     }
 
-    method has_timers { !! @timers }
+    method has_active_timers { !! @timers }
 
     method now  {
         state $MONOTONIC = Time::HiRes::CLOCK_MONOTONIC();
@@ -30,6 +30,7 @@ class Acktor::System::Timers {
     }
 
     method wait ($duration) {
+        $logger->log( DEBUG, "... got wait($duration)") if DEBUG;
         Time::HiRes::sleep( $duration );
     }
 

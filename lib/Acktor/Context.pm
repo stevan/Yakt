@@ -42,14 +42,15 @@ class Acktor::Context {
     }
 
     method schedule (%options) { $system->schedule_timer( %options ) }
+    method watch    (%options) { $system->attach_watcher( $ref, %options ) }
 
     method stop {
         $logger->log(DEBUG, "stop($ref)[".$ref->pid."]" ) if DEBUG;
         $system->despawn_actor( $ref );
     }
 
-    method notify ($terminated) {
-        $mailbox->notify( $terminated )
+    method notify ($signal) {
+        $mailbox->notify( $signal )
     }
 
     method restart { $mailbox->restart }

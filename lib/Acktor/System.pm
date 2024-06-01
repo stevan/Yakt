@@ -7,7 +7,10 @@ use builtin      qw[ blessed refaddr true false ];
 use Acktor::Mailbox;
 use Acktor::Props;
 use Acktor::Timer;
+use Acktor::IO::Watcher;
+
 use Acktor::System::Timers;
+use Acktor::System::IO::Watchers;
 use Acktor::System::Actors::Root;
 
 class Acktor::System {
@@ -19,14 +22,15 @@ class Acktor::System {
     field @mailboxes;
 
     field $timers;
+    field $watchers;
 
     field $logger;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-        $timers = Acktor::System::Timers->new;
+        $logger   = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+        $timers   = Acktor::System::Timers->new;
+        $watchers = Acktor::System::IO::Watchers->new;
     }
-
 
     method schedule_timer (%options) {
         my $timeout  = $options{after};
@@ -42,6 +46,12 @@ class Acktor::System {
         $timers->schedule_timer($timer);
 
         return $timer;
+    }
+
+    method attach_watcher ($ref, %options) {
+        my $watcher = Acktor::IO::Watcher->new( ref => $ref, %options );
+        $watchers->add_watcher( $watcher );
+        return $watcher;
     }
 
     method spawn_actor ($props, $parent=undef) {
@@ -113,12 +123,14 @@ class Acktor::System {
         $timers->tick;
         # mailboxes
         $self->run_mailboxes;
+        # watchers
+        $watchers->tick( $timers->should_wait );
 
         # ... check to see if we should wait
-        if (my $wait_for = $timers->should_wait) {
-            $logger->log( WARN, "... waiting ($wait_for)" ) if WARN;
-            $timers->wait( $wait_for );
-        }
+        #if (my $wait_for = $timers->should_wait) {
+        #    $logger->log( WARN, "... waiting ($wait_for)" ) if WARN;
+        #    $timers->wait( $wait_for );
+        #}
 
         $logger->header('end:tick['.$TICK.']') if DEBUG;
         $TICK++;
@@ -135,8 +147,9 @@ class Acktor::System {
                 $self->print_actor_tree($root);
             }
 
-            # if we have timers, then loop again ...
-            next if $timers->has_timers;
+            # if we have timers or watchers, then loop again ...
+            next if $timers->has_active_timers
+                 || $watchers->has_active_watchers;
 
             # if no timers, see if we have active children ...
             if (my $usr = $lookup{ '//usr' } ) {

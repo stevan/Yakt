@@ -102,8 +102,8 @@ class Acktor::Mailbox {
         push @signals => Acktor::Signals::Stopping->new;
     }
 
-    method notify ($terminated) {
-        push @signals => $terminated;
+    method notify ($signal) {
+        push @signals => $signal;
     }
 
     method tick {

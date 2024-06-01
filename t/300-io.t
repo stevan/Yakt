@@ -19,6 +19,7 @@ class Google :isa(Acktor) {
     our $RESTARTED  = 0;
     our $STOPPING   = 0;
     our $STOPPED    = 0;
+    our $SUCCESS    = 0;
 
     field $watcher;
     field $timeout;
@@ -57,6 +58,8 @@ class Google :isa(Acktor) {
             $watcher->is_reading = false;
             $timeout->cancel;
 
+            $SUCCESS++;
+
             $context->stop;
 
         } elsif ($signal isa Acktor::Signals::Stopping) {
@@ -91,6 +94,7 @@ is($Google::RESTARTED, 0, '... got the expected restarted');
 is($Google::STARTED,   1, '... got the expected started');
 is($Google::STOPPING,  1, '... got the expected stopping');
 is($Google::STOPPED,   1, '... got the expected stopped');
+is($Google::SUCCESS,   1, '... got the expected success');
 
 done_testing;
 

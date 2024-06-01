@@ -3,7 +3,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-class Acktor::System::IO::Watchers {
+class Acktor::System::IO {
     use Acktor::Logging;
 
     use IO::Select;

@@ -4,8 +4,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-class Acktor::IO::Signals::CanRead  :isa(Acktor::Signals::Signal) {}
-class Acktor::IO::Signals::CanWrite :isa(Acktor::Signals::Signal) {}
+use Acktor::IO::Signals;
 
 class Acktor::IO::Watcher {
     use Acktor::Logging;

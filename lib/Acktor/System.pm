@@ -7,10 +7,12 @@ use builtin      qw[ blessed refaddr true false ];
 use Acktor::Mailbox;
 use Acktor::Props;
 use Acktor::Timer;
+
 use Acktor::IO::Watcher;
 
 use Acktor::System::Timers;
-use Acktor::System::IO::Watchers;
+use Acktor::System::IO;
+
 use Acktor::System::Actors::Root;
 
 class Acktor::System {
@@ -19,17 +21,17 @@ class Acktor::System {
     field $root;
 
     field %lookup;
-    field @mailboxes;
 
+    field @mailboxes;
     field $timers;
-    field $watchers;
+    field $io;
 
     field $logger;
 
     ADJUST {
-        $logger   = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-        $timers   = Acktor::System::Timers->new;
-        $watchers = Acktor::System::IO::Watchers->new;
+        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+        $timers = Acktor::System::Timers->new;
+        $io     = Acktor::System::IO->new;
     }
 
     method schedule_timer (%options) {
@@ -50,7 +52,7 @@ class Acktor::System {
 
     method attach_watcher ($ref, %options) {
         my $watcher = Acktor::IO::Watcher->new( ref => $ref, %options );
-        $watchers->add_watcher( $watcher );
+        $io->add_watcher( $watcher );
         return $watcher;
     }
 
@@ -124,7 +126,7 @@ class Acktor::System {
         # mailboxes
         $self->run_mailboxes;
         # watchers
-        $watchers->tick( $timers->should_wait );
+        $io->tick( $timers->should_wait );
 
         # ... check to see if we should wait
         #if (my $wait_for = $timers->should_wait) {
@@ -149,7 +151,7 @@ class Acktor::System {
 
             # if we have timers or watchers, then loop again ...
             next if $timers->has_active_timers
-                 || $watchers->has_active_watchers;
+                 || $io->has_active_watchers;
 
             # if no timers, see if we have active children ...
             if (my $usr = $lookup{ '//usr' } ) {

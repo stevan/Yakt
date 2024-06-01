@@ -86,16 +86,8 @@ class Acktor::System::IO {
             return;
         }
 
-        foreach my $fh (@{ $r // [] }) {
-            foreach my $watcher ( $to_read{$fh}->@* ) {
-                $watcher->can_read;
-            }
-        }
-        foreach my $fh (@{ $w // [] }) {
-            foreach my $watcher ( $to_write{$fh}->@* ) {
-                $watcher->can_write;
-            }
-        }
+        map $_->can_read,  map $_->@*, @to_read { @$r } if $r;
+        map $_->can_write, map $_->@*, @to_write{ @$w } if $w;
     }
 
 }

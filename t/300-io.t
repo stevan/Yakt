@@ -31,11 +31,24 @@ class Google :isa(Acktor) {
 
             my $google = IO::Socket::SSL->new('www.google.com:443') || die 'Could not connect SSL to google';
             $self->logger->log(INFO, sprintf 'Connected to %s' => $google ) if INFO;
-            $google->print( HTTP::Request->new( GET => '/' )->as_string );
 
-            $watcher = $context->watch( fh => $google, reading => true );
+            $watcher = $context->watch( fh => $google, writing => true );
             $timeout = $context->schedule( after => 2, callback => sub {
-                $self->logger->log(INFO, 'Timeout for Google!' ) if INFO;
+                $self->logger->log(INFO, 'Timeout for writing to Google!' ) if INFO;
+                $watcher->is_writing = false;
+            });
+
+        } elsif ($signal isa Acktor::IO::Signals::CanWrite) {
+            $self->logger->log(INFO, sprintf 'CanWrite %s' => $context->self ) if INFO;
+            $timeout->cancel;
+
+            $watcher->fh->print( HTTP::Request->new( GET => '/' )->as_string );
+
+            $watcher->is_writing = false;
+            $watcher->is_reading = true;
+
+            $timeout = $context->schedule( after => 2, callback => sub {
+                $self->logger->log(INFO, 'Timeout for reading from Google!' ) if INFO;
                 $watcher->is_reading = false;
             });
 
@@ -52,6 +65,8 @@ class Google :isa(Acktor) {
                 $self->logger->log( INFO, "... Haven't gotten any data" ) if INFO;
                 return;
             }
+
+            $self->logger->log(INFO, "Read len($len) from Google!" ) if INFO;
 
             Test::More::is($line, $expected, '... got the correct response');
 

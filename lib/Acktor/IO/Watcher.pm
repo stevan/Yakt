@@ -37,6 +37,6 @@ class Acktor::IO::Watcher {
 
     method can_write {
         $logger->log( WARN, "got Can Write" ) if WARN;
-        $ref->context->notify( Acktor::IO::Signals::Canwrite->new );
+        $ref->context->notify( Acktor::IO::Signals::CanWrite->new );
     }
 }

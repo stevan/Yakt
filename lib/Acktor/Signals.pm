@@ -4,7 +4,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-package Actor::Signals {
+package Acktor::Signals {
     use Acktor::Signals::Signal;
     use Acktor::Signals::Started;
     use Acktor::Signals::Stopping;

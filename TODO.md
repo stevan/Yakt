@@ -1,5 +1,30 @@
 # TODO
 
+## IO
+
+- move IO::Signals to Signals::IO
+
+- move System::IO to IO
+
+- Watchers are for non-blocking streams
+    - streams are:
+        - sockets
+            - most forms of `connect` are async
+            - `accept` is mostly async
+        - pipes
+        - tty (STDIN, STDOUT, STDERR)
+        - opened filehandle reading/writing
+
+- Watchers are NOT for blocking operations
+    - what can't be async:
+        - disk access (open, unlink, etc.)
+        - some forms of `connect` are not async
+            - SSL is one example
+            - things that call gethost* stuff
+
+
+
+
 ## Address
 
 - Re-add these ...

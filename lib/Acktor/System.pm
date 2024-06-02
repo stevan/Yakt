@@ -6,12 +6,9 @@ use builtin      qw[ blessed refaddr true false ];
 
 use Acktor::Mailbox;
 use Acktor::Props;
-use Acktor::Timer;
 
-use Acktor::IO::Watcher;
-
-use Acktor::System::Timers;
-use Acktor::System::IO;
+use Acktor::Timers;
+use Acktor::IO;
 
 use Acktor::System::Actors::Root;
 
@@ -30,9 +27,11 @@ class Acktor::System {
 
     ADJUST {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-        $timers = Acktor::System::Timers->new;
-        $io     = Acktor::System::IO->new;
+        $timers = Acktor::Timers->new;
+        $io     = Acktor::IO->new;
     }
+
+    method io { $io }
 
     method schedule_timer (%options) {
         my $timeout  = $options{after};
@@ -40,7 +39,7 @@ class Acktor::System {
 
         $logger->log( DEBUG, "schedule( $timeout, $callback )" ) if DEBUG;
 
-        my $timer = Acktor::Timer->new(
+        my $timer = Acktor::Timers::Timer->new(
             timeout  => $timeout,
             callback => $callback,
         );
@@ -48,12 +47,6 @@ class Acktor::System {
         $timers->schedule_timer($timer);
 
         return $timer;
-    }
-
-    method attach_watcher ($ref, %options) {
-        my $watcher = Acktor::IO::Watcher->new( ref => $ref, %options );
-        $io->add_watcher( $watcher );
-        return $watcher;
     }
 
     method spawn_actor ($props, $parent=undef) {
@@ -151,7 +144,7 @@ class Acktor::System {
 
             # if we have timers or watchers, then loop again ...
             next if $timers->has_active_timers
-                 || $io->has_active_watchers;
+                 || $io->has_active_selectors;
 
             # if no timers, see if we have active children ...
             if (my $usr = $lookup{ '//usr' } ) {

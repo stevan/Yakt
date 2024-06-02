@@ -3,12 +3,18 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-class Acktor::System::IO {
+use Acktor::Signals::IO;
+
+use Acktor::IO::Selector;
+use Acktor::IO::Selector::Stream;
+use Acktor::IO::Selector::Socket;
+
+class Acktor::IO {
     use Acktor::Logging;
 
     use IO::Select;
 
-    field @watchers;
+    field @selectors;
 
     field $logger;
 
@@ -16,16 +22,16 @@ class Acktor::System::IO {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
     }
 
-    method add_watcher ($watcher) {
-        push @watchers => $watcher;
+    method add_selector ($selector) {
+        push @selectors => $selector;
     }
 
-    method remove_watcher ($watcher) {
-        @watchers = grep { refaddr $watcher != refaddr $_ } @watchers;
+    method remove_selector ($selector) {
+        @selectors = grep { refaddr $selector != refaddr $_ } @selectors;
     }
 
-    method has_active_watchers {
-        !! scalar grep $_->is_active, @watchers;
+    method has_active_selectors {
+        !! scalar grep $_->is_active, @selectors;
     }
 
     ## ...
@@ -35,7 +41,7 @@ class Acktor::System::IO {
 
         $logger->log( DEBUG, "tick w/ timeout($timeout) ..." ) if DEBUG;
 
-        my @to_watch = grep $_->is_active, @watchers;
+        my @to_watch = grep $_->is_active, @selectors;
 
         unless (@to_watch) {
             if ($timeout) {
@@ -50,44 +56,44 @@ class Acktor::System::IO {
 
         my $readers = IO::Select->new;
         my $writers = IO::Select->new;
+        my $errors  = IO::Select->new;
 
         my %to_read;
         my %to_write;
+        my %got_error;
 
         foreach my $watcher (@to_watch) {
             my $fh = $watcher->fh;
 
-            if ($watcher->is_reading) {
-                #say "adding read watcher ($fh) ($watcher)";
+            if ($watcher->watch_for_read) {
                 push @{ $to_read{ $fh } //= [] } => $watcher;
                 $logger->log( DEBUG, "... adding fh($fh) to select read" ) if DEBUG;
                 $readers->add( $fh );
             }
 
-            if ($watcher->is_writing) {
-                #say "adding write watcher ($fh) ($watcher)";
+            if ($watcher->watch_for_write) {
                 push @{ $to_write{ $fh } //= [] } => $watcher;
                 $logger->log( DEBUG, "... adding fh($fh) to select write" ) if DEBUG;
                 $writers->add( $fh );
             }
+
+            if ($watcher->watch_for_error) {
+                push @{ $got_error{ $fh } //= [] } => $watcher;
+                $logger->log( DEBUG, "... adding fh($fh) to select error" ) if DEBUG;
+                $errors->add( $fh );
+            }
         }
 
-        my @handles = IO::Select::select(
-            $readers,
-            $writers,
-            undef, # TODO: fix me when I know when I am doing
-            $timeout
-        );
+        my ($r, $w, $e) = IO::Select::select($readers, $writers, $errors, $timeout);
 
-        my ($r, $w, undef) = @handles;
-
-        if (!defined $r && !defined $w) {
+        if (!defined $r && !defined $w && !defined $e) {
             $logger->log( DEBUG, "... no events to see, looping" ) if DEBUG;
             return;
         }
 
-        map $_->can_read,  map $_->@*, @to_read { @$r } if $r;
-        map $_->can_write, map $_->@*, @to_write{ @$w } if $w;
+        map $_->got_error, map $_->@*, @got_error{ @$e } if $e;
+        map $_->can_read,  map $_->@*, @to_read  { @$r } if $r;
+        map $_->can_write, map $_->@*, @to_write { @$w } if $w;
     }
 
 }

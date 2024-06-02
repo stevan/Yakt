@@ -29,16 +29,45 @@ class Google :isa(Acktor) {
             $STARTED++;
             $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
 
-            my $google = IO::Socket::SSL->new('www.google.com:443') || die 'Could not connect SSL to google';
+            my $google = IO::Socket::SSL->new(
+                PeerAddr => 'www.google.com:443',
+                Blocking => 0
+            ) || die 'Could not connect SSL to google';
+
             $self->logger->log(INFO, sprintf 'Connected to %s' => $google ) if INFO;
 
-            $watcher = $context->watch( fh => $google, writing => true );
+            $watcher = Acktor::IO::Selector::Socket->new( ref => $context->self, fh => $google );
+            $watcher->is_connecting = true;
+            $context->io->add_selector( $watcher );
+
             $timeout = $context->schedule( after => 2, callback => sub {
-                $self->logger->log(INFO, 'Timeout for writing to Google!' ) if INFO;
-                $watcher->is_writing = false;
+                $self->logger->log(INFO, 'Timeout for connecting to Google!' ) if INFO;
+                $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::IO::Signals::CanWrite) {
+        } elsif ($signal isa Acktor::Signals::IO::IsConnected) {
+            $self->logger->log(INFO, sprintf 'IsConnected %s' => $context->self ) if INFO;
+            $timeout->cancel;
+
+            $watcher->is_connecting = false;
+            $watcher->is_writing = true;
+
+            $timeout = $context->schedule( after => 2, callback => sub {
+                $self->logger->log(INFO, 'Timeout for reading from Google!' ) if INFO;
+                $watcher->reset;
+            });
+
+        } elsif ($signal isa Acktor::Signals::IO::GotConnectionError) {
+            $self->logger->log(INFO, sprintf 'GotConnectionError %s' => $context->self ) if INFO;
+            $timeout->cancel;
+            $watcher->reset;
+
+        } elsif ($signal isa Acktor::Signals::IO::GotError) {
+            $self->logger->log(INFO, sprintf 'GotError %s' => $context->self ) if INFO;
+            $timeout->cancel;
+            $watcher->reset;
+
+        } elsif ($signal isa Acktor::Signals::IO::CanWrite) {
             $self->logger->log(INFO, sprintf 'CanWrite %s' => $context->self ) if INFO;
             $timeout->cancel;
 
@@ -49,10 +78,10 @@ class Google :isa(Acktor) {
 
             $timeout = $context->schedule( after => 2, callback => sub {
                 $self->logger->log(INFO, 'Timeout for reading from Google!' ) if INFO;
-                $watcher->is_reading = false;
+                $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::IO::Signals::CanRead) {
+        } elsif ($signal isa Acktor::Signals::IO::CanRead) {
             $self->logger->log(INFO, sprintf 'CanRead %s' => $context->self ) if INFO;
 
             my $socket = $watcher->fh;
@@ -70,8 +99,8 @@ class Google :isa(Acktor) {
 
             Test::More::is($line, $expected, '... got the correct response');
 
-            $watcher->is_reading = false;
             $timeout->cancel;
+            $watcher->reset;
             $watcher->fh->close;
 
             $SUCCESS++;
@@ -101,18 +130,18 @@ class Google :isa(Acktor) {
 
 my $sys = Acktor::System->new->init(sub ($context) {
     my $g1 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
-    #my $g2 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
-    #my $g3 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
+    my $g2 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
+    my $g3 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
 });
 
 $sys->loop_until_done;
 
 is($Google::MESSAGED,  0, '... got the expected messaged');
 is($Google::RESTARTED, 0, '... got the expected restarted');
-is($Google::STARTED,   1, '... got the expected started');
-is($Google::STOPPING,  1, '... got the expected stopping');
-is($Google::STOPPED,   1, '... got the expected stopped');
-is($Google::SUCCESS,   1, '... got the expected success');
+is($Google::STARTED,   3, '... got the expected started');
+is($Google::STOPPING,  3, '... got the expected stopping');
+is($Google::STOPPED,   3, '... got the expected stopped');
+is($Google::SUCCESS,   3, '... got the expected success');
 
 done_testing;
 

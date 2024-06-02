@@ -26,6 +26,8 @@ class Acktor::Context {
     method children { $mailbox->children }
     method props    { $mailbox->props    }
 
+    method io { $system->io }
+
     method is_stopped { $mailbox->is_stopped }
     method is_alive   { $mailbox->is_alive   }
 
@@ -42,7 +44,6 @@ class Acktor::Context {
     }
 
     method schedule (%options) { $system->schedule_timer( %options ) }
-    method watch    (%options) { $system->attach_watcher( $ref, %options ) }
 
     method stop {
         $logger->log(DEBUG, "stop($ref)[".$ref->pid."]" ) if DEBUG;

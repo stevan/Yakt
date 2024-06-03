@@ -14,8 +14,9 @@
 - add method for adding Selectors
     - go via System
 
+## Child Supervision
 
-
+- need to add this
 
 ## Address
 

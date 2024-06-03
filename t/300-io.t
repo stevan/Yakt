@@ -25,7 +25,7 @@ class Google :isa(Acktor) {
     field $timeout;
 
     method signal ($context, $signal) {
-        if ($signal isa Acktor::Signals::Started) {
+        if ($signal isa Acktor::System::Signals::Started) {
             $STARTED++;
             $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
 
@@ -46,7 +46,7 @@ class Google :isa(Acktor) {
                 $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::Signals::IO::IsConnected) {
+        } elsif ($signal isa Acktor::System::Signals::IO::IsConnected) {
             $self->logger->log(INFO, sprintf 'IsConnected %s' => $context->self ) if INFO;
             $timeout->cancel;
 
@@ -58,17 +58,17 @@ class Google :isa(Acktor) {
                 $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::Signals::IO::GotConnectionError) {
+        } elsif ($signal isa Acktor::System::Signals::IO::GotConnectionError) {
             $self->logger->log(INFO, sprintf 'GotConnectionError %s' => $context->self ) if INFO;
             $timeout->cancel;
             $watcher->reset;
 
-        } elsif ($signal isa Acktor::Signals::IO::GotError) {
+        } elsif ($signal isa Acktor::System::Signals::IO::GotError) {
             $self->logger->log(INFO, sprintf 'GotError %s' => $context->self ) if INFO;
             $timeout->cancel;
             $watcher->reset;
 
-        } elsif ($signal isa Acktor::Signals::IO::CanWrite) {
+        } elsif ($signal isa Acktor::System::Signals::IO::CanWrite) {
             $self->logger->log(INFO, sprintf 'CanWrite %s' => $context->self ) if INFO;
             $timeout->cancel;
 
@@ -82,7 +82,7 @@ class Google :isa(Acktor) {
                 $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::Signals::IO::CanRead) {
+        } elsif ($signal isa Acktor::System::Signals::IO::CanRead) {
             $self->logger->log(INFO, sprintf 'CanRead %s' => $context->self ) if INFO;
 
             my $socket = $watcher->fh;
@@ -108,13 +108,13 @@ class Google :isa(Acktor) {
 
             $context->stop;
 
-        } elsif ($signal isa Acktor::Signals::Stopping) {
+        } elsif ($signal isa Acktor::System::Signals::Stopping) {
             $STOPPING++;
             $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::Signals::Restarting) {
+        } elsif ($signal isa Acktor::System::Signals::Restarting) {
             $RESTARTED++;
             $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::Signals::Stopped) {
+        } elsif ($signal isa Acktor::System::Signals::Stopped) {
             $STOPPED++;
             $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
         }

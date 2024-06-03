@@ -6,7 +6,7 @@ use builtin      qw[ blessed refaddr true false ];
 
 use Acktor::Ref;
 use Acktor::Context;
-use Acktor::Signals;
+use Acktor::System::Signals;
 
 class Acktor::Mailbox::State {
     use constant STARTING   => 0;
@@ -63,7 +63,7 @@ class Acktor::Mailbox {
         $supervisor = $props->new_supervisor;
         $behavior   = $props->new_behavior;
 
-        push @signals => Acktor::Signals::Started->new;
+        push @signals => Acktor::System::Signals::Started->new;
     }
 
     method to_string { "Mailbox( $ref )" }
@@ -95,11 +95,11 @@ class Acktor::Mailbox {
 
     method restart {
         $self->suspend;
-        push @signals => Acktor::Signals::Restarting->new;
+        push @signals => Acktor::System::Signals::Restarting->new;
     }
     method stop {
         $self->suspend;
-        push @signals => Acktor::Signals::Stopping->new;
+        push @signals => Acktor::System::Signals::Stopping->new;
     }
 
     method notify ($signal) {
@@ -117,7 +117,7 @@ class Acktor::Mailbox {
             my $sig = shift @sigs;
             $logger->log(INTERNALS, "%% GOT SIGNAL($sig)" ) if INTERNALS;
 
-            if ($sig isa Acktor::Signals::Started) {
+            if ($sig isa Acktor::System::Signals::Started) {
                 $state = Acktor::Mailbox::State->ALIVE;
                 $actor = $props->new_actor;
             }
@@ -130,7 +130,7 @@ class Acktor::Mailbox {
                 $logger->log(ERROR, "!!! GOT AN ERROR($e) WHILE PROCESSING SIGNALS!" ) if ERROR;
             }
 
-            if ($sig isa Acktor::Signals::Stopping) {
+            if ($sig isa Acktor::System::Signals::Stopping) {
                 if ( @children ) {
                     # wait for the children
                     $state = Acktor::Mailbox::State->STOPPING;
@@ -139,11 +139,11 @@ class Acktor::Mailbox {
                     # if there are no children then
                     # make sure Stopped is the next
                     # thing processed
-                    unshift @signals => Acktor::Signals::Stopped->new;
+                    unshift @signals => Acktor::System::Signals::Stopped->new;
                     last;
                 }
             }
-            elsif ($sig isa Acktor::Signals::Restarting) {
+            elsif ($sig isa Acktor::System::Signals::Restarting) {
                 if ( @children ) {
                     # wait for the children
                     $state = Acktor::Mailbox::State->RESTARTING;
@@ -153,11 +153,11 @@ class Acktor::Mailbox {
                     # restart the actor and make sure
                     # Started is the next signal
                     # that is processed
-                    unshift @signals => Acktor::Signals::Started->new;
+                    unshift @signals => Acktor::System::Signals::Started->new;
                     last;
                 }
             }
-            elsif ($sig isa Acktor::Signals::Stopped) {
+            elsif ($sig isa Acktor::System::Signals::Stopped) {
                 # ... what to do here
                 $state = Acktor::Mailbox::State->STOPPED;
                 # we can destruct the mailbox here
@@ -166,12 +166,12 @@ class Acktor::Mailbox {
 
                 if ($parent) {
                     $logger->log(DEBUG, "$self is Stopped, notifying $parent" ) if DEBUG;
-                    $parent->context->notify( Acktor::Signals::Terminated->new( ref => $ref ) );
+                    $parent->context->notify( Acktor::System::Signals::Terminated->new( ref => $ref ) );
                 }
                 # and exit
                 last;
             }
-            elsif ($sig isa Acktor::Signals::Terminated) {
+            elsif ($sig isa Acktor::System::Signals::Terminated) {
                 my $child = $sig->ref;
 
                 $logger->log(DEBUG, "$self got TERMINATED($child) while in state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
@@ -186,11 +186,11 @@ class Acktor::Mailbox {
                 if (@children == 0) {
                     $logger->log(DEBUG, "no more children, resuming state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
                     if ($state == Acktor::Mailbox::State->STOPPING) {
-                        unshift @signals => Acktor::Signals::Stopped->new;
+                        unshift @signals => Acktor::System::Signals::Stopped->new;
                         last;
                     }
                     elsif ($state == Acktor::Mailbox::State->RESTARTING) {
-                        unshift @signals => Acktor::Signals::Started->new;
+                        unshift @signals => Acktor::System::Signals::Started->new;
                         last;
                     }
                     # otherwise just keep on going ...

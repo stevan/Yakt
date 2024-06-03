@@ -33,7 +33,7 @@ class Foo :isa(Acktor) {
     }
 
     method signal ($context, $signal) {
-        if ($signal isa Acktor::Signals::Started) {
+        if ($signal isa Acktor::System::Signals::Started) {
             $STARTED++;
             $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
             if ( $depth <= $max ) {
@@ -62,13 +62,13 @@ class Foo :isa(Acktor) {
                     $x->send( Bar->new );
                 }
             }
-        } elsif ($signal isa Acktor::Signals::Stopping) {
+        } elsif ($signal isa Acktor::System::Signals::Stopping) {
             $STOPPING++;
             $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::Signals::Restarting) {
+        } elsif ($signal isa Acktor::System::Signals::Restarting) {
             $RESTARTED++;
             $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::Signals::Stopped) {
+        } elsif ($signal isa Acktor::System::Signals::Stopped) {
             $STOPPED++;
             $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
         }

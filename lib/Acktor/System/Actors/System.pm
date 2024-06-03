@@ -19,7 +19,7 @@ class Acktor::System::Actors::System :isa(Acktor) {
 
 
     method signal ($context, $signal) {
-        if ($signal isa Acktor::Signals::Started) {
+        if ($signal isa Acktor::System::Signals::Started) {
             $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
             $context->spawn( Acktor::Props->new(
                 class => 'Acktor::System::Actors::DeadLetterQueue',

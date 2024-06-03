@@ -5,7 +5,7 @@ use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
 use Acktor::System::IO::Selector;
-use Acktor::Signals::IO;
+use Acktor::System::Signals::IO;
 
 class Acktor::System::IO::Selector::Stream :isa(Acktor::System::IO::Selector) {
     use Acktor::Logging;
@@ -29,16 +29,16 @@ class Acktor::System::IO::Selector::Stream :isa(Acktor::System::IO::Selector) {
 
     method can_read {
         $self->logger->log( WARN, "got Can Read" ) if WARN;
-        $self->ref->context->notify( Acktor::Signals::IO::CanRead->new );
+        $self->ref->context->notify( Acktor::System::Signals::IO::CanRead->new );
     }
 
     method can_write {
         $self->logger->log( WARN, "got Can Write" ) if WARN;
-        $self->ref->context->notify( Acktor::Signals::IO::CanWrite->new );
+        $self->ref->context->notify( Acktor::System::Signals::IO::CanWrite->new );
     }
 
     method got_error {
         $self->logger->log( WARN, "got Error" ) if WARN;
-        $self->ref->context->notify( Acktor::Signals::IO::GotError->new );
+        $self->ref->context->notify( Acktor::System::Signals::IO::GotError->new );
     }
 }

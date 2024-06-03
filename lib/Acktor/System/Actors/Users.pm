@@ -18,7 +18,7 @@ class Acktor::System::Actors::Users :isa(Acktor) {
     }
 
     method signal ($context, $signal) {
-        if ($signal isa Acktor::Signals::Started) {
+        if ($signal isa Acktor::System::Signals::Started) {
             $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
             try {
                 $logger->log(INTERNALS, "Running init callback for $context" ) if INTERNALS;

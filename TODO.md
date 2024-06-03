@@ -4,13 +4,6 @@
 
 ## Context
 
-- remove direct Mailbox usage
-    - add method for sending signals
-        - go via System for this
-        - also add this to the Ref
-    - add method for restarting actor
-        - go via System for this
-
 - add method for adding Selectors
     - go via System
 

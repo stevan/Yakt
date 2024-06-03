@@ -2,25 +2,17 @@
 
 ## IO
 
-- move IO::Signals to Signals::IO
+## Context
 
-- move System::IO to IO
+- remove direct Mailbox usage
+    - add method for sending signals
+        - go via System for this
+        - also add this to the Ref
+    - add method for restarting actor
+        - go via System for this
 
-- Watchers are for non-blocking streams
-    - streams are:
-        - sockets
-            - most forms of `connect` are async
-            - `accept` is mostly async
-        - pipes
-        - tty (STDIN, STDOUT, STDERR)
-        - opened filehandle reading/writing
-
-- Watchers are NOT for blocking operations
-    - what can't be async:
-        - disk access (open, unlink, etc.)
-        - some forms of `connect` are not async
-            - SSL is one example
-            - things that call gethost* stuff
+- add method for adding Selectors
+    - go via System
 
 
 

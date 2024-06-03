@@ -6,9 +6,9 @@ use builtin      qw[ blessed refaddr true false ];
 
 use Time::HiRes;
 
-use Acktor::Timers::Timer;
+use Acktor::System::Timers::Timer;
 
-class Acktor::Timers {
+class Acktor::System::Timers {
     use Acktor::Logging;
 
     our $TIMER_PRECISION_DECIMAL = 0.001;

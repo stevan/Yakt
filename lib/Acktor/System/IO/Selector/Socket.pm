@@ -4,10 +4,10 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-use Acktor::IO::Selector;
+use Acktor::System::IO::Selector;
 use Acktor::Signals::IO;
 
-class Acktor::IO::Selector::Socket :isa(Acktor::IO::Selector) {
+class Acktor::System::IO::Selector::Socket :isa(Acktor::System::IO::Selector) {
     use Acktor::Logging;
 
     field $connecting :param = false;

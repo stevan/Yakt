@@ -5,11 +5,11 @@ use builtin      qw[ blessed refaddr true false ];
 
 use Acktor::Signals::IO;
 
-use Acktor::IO::Selector;
-use Acktor::IO::Selector::Stream;
-use Acktor::IO::Selector::Socket;
+use Acktor::System::IO::Selector;
+use Acktor::System::IO::Selector::Stream;
+use Acktor::System::IO::Selector::Socket;
 
-class Acktor::IO {
+class Acktor::System::IO {
     use Acktor::Logging;
 
     use IO::Select;

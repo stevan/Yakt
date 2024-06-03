@@ -36,9 +36,10 @@ class Google :isa(Acktor) {
 
             $self->logger->log(INFO, sprintf 'Connected to %s' => $google ) if INFO;
 
-            $watcher = Acktor::IO::Selector::Socket->new( ref => $context->self, fh => $google );
+            $watcher = Acktor::System::IO::Selector::Socket->new( ref => $context->self, fh => $google );
             $watcher->is_connecting = true;
-            $context->io->add_selector( $watcher );
+
+            $context->system->io->add_selector( $watcher );
 
             $timeout = $context->schedule( after => 2, callback => sub {
                 $self->logger->log(INFO, 'Timeout for connecting to Google!' ) if INFO;

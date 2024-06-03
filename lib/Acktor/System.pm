@@ -7,8 +7,8 @@ use builtin      qw[ blessed refaddr true false ];
 use Acktor::Mailbox;
 use Acktor::Props;
 
-use Acktor::Timers;
-use Acktor::IO;
+use Acktor::System::Timers;
+use Acktor::System::IO;
 
 use Acktor::System::Actors::Root;
 
@@ -27,8 +27,8 @@ class Acktor::System {
 
     ADJUST {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-        $timers = Acktor::Timers->new;
-        $io     = Acktor::IO->new;
+        $timers = Acktor::System::Timers->new;
+        $io     = Acktor::System::IO->new;
     }
 
     method io { $io }
@@ -39,7 +39,7 @@ class Acktor::System {
 
         $logger->log( DEBUG, "schedule( $timeout, $callback )" ) if DEBUG;
 
-        my $timer = Acktor::Timers::Timer->new(
+        my $timer = Acktor::System::Timers::Timer->new(
             timeout  => $timeout,
             callback => $callback,
         );

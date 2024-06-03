@@ -4,9 +4,9 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-use Acktor::Supervisors::Supervisor;
+use Acktor::System::Supervisors::Supervisor;
 
-class Acktor::Supervisors::Resume :isa(Acktor::Supervisors::Supervisor) {
+class Acktor::System::Supervisors::Resume :isa(Acktor::System::Supervisors::Supervisor) {
     use Acktor::Logging;
 
     field $logger;

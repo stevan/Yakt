@@ -4,7 +4,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-use Acktor::Supervisors;
+use Acktor::System::Supervisors;
 use Acktor::Behavior;
 
 class Acktor::Props {
@@ -35,7 +35,7 @@ class Acktor::Props {
         $class->new( %$args )
     }
 
-    method new_supervisor { $supervisor //= Acktor::Supervisors::Stop->new }
+    method new_supervisor { $supervisor //= Acktor::System::Supervisors::Stop->new }
     method new_behavior   { $behavior   //= Acktor::Behavior->new          }
 
     method to_string { "Props[$class]" }

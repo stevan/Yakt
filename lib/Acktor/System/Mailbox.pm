@@ -8,7 +8,7 @@ use Acktor::Ref;
 use Acktor::Context;
 use Acktor::System::Signals;
 
-class Acktor::Mailbox::State {
+class Acktor::System::Mailbox::State {
     use constant STARTING   => 0;
     use constant ALIVE      => 1;
     use constant SUSPENDED  => 2;
@@ -26,7 +26,7 @@ class Acktor::Mailbox::State {
     );
 }
 
-class Acktor::Mailbox {
+class Acktor::System::Mailbox {
     use Acktor::Logging;
 
     use overload '""' => \&to_string;
@@ -56,7 +56,7 @@ class Acktor::Mailbox {
     ADJUST {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
 
-        $state   = Acktor::Mailbox::State->STARTING;
+        $state   = Acktor::System::Mailbox::State->STARTING;
         $ref     = Acktor::Ref->new( pid => ++$PID_SEQ );
         $context = Acktor::Context->new( ref => $ref, mailbox => $self, system => $system );
 
@@ -76,12 +76,12 @@ class Acktor::Mailbox {
     method props  { $props  }
     method system { $system }
 
-    method is_starting   { $state == Acktor::Mailbox::State->STARTING   }
-    method is_alive      { $state == Acktor::Mailbox::State->ALIVE      }
-    method is_suspended  { $state == Acktor::Mailbox::State->SUSPENDED  }
-    method is_stopping   { $state == Acktor::Mailbox::State->STOPPING   }
-    method is_restarting { $state == Acktor::Mailbox::State->RESTARTING }
-    method is_stopped    { $state == Acktor::Mailbox::State->STOPPED    }
+    method is_starting   { $state == Acktor::System::Mailbox::State->STARTING   }
+    method is_alive      { $state == Acktor::System::Mailbox::State->ALIVE      }
+    method is_suspended  { $state == Acktor::System::Mailbox::State->SUSPENDED  }
+    method is_stopping   { $state == Acktor::System::Mailbox::State->STOPPING   }
+    method is_restarting { $state == Acktor::System::Mailbox::State->RESTARTING }
+    method is_stopped    { $state == Acktor::System::Mailbox::State->STOPPED    }
 
     method ref     { $ref     }
     method context { $context }
@@ -90,8 +90,8 @@ class Acktor::Mailbox {
 
     method enqueue_message ($message) { push @messages => $message }
 
-    method suspend { $state = Acktor::Mailbox::State->SUSPENDED }
-    method resume  { $state = Acktor::Mailbox::State->ALIVE     }
+    method suspend { $state = Acktor::System::Mailbox::State->SUSPENDED }
+    method resume  { $state = Acktor::System::Mailbox::State->ALIVE     }
 
     method restart {
         $self->suspend;
@@ -118,7 +118,7 @@ class Acktor::Mailbox {
             $logger->log(INTERNALS, "%% GOT SIGNAL($sig)" ) if INTERNALS;
 
             if ($sig isa Acktor::System::Signals::Started) {
-                $state = Acktor::Mailbox::State->ALIVE;
+                $state = Acktor::System::Mailbox::State->ALIVE;
                 $actor = $props->new_actor;
             }
 
@@ -133,7 +133,7 @@ class Acktor::Mailbox {
             if ($sig isa Acktor::System::Signals::Stopping) {
                 if ( @children ) {
                     # wait for the children
-                    $state = Acktor::Mailbox::State->STOPPING;
+                    $state = Acktor::System::Mailbox::State->STOPPING;
                     $_->context->stop foreach @children;
                 } else {
                     # if there are no children then
@@ -146,7 +146,7 @@ class Acktor::Mailbox {
             elsif ($sig isa Acktor::System::Signals::Restarting) {
                 if ( @children ) {
                     # wait for the children
-                    $state = Acktor::Mailbox::State->RESTARTING;
+                    $state = Acktor::System::Mailbox::State->RESTARTING;
                     $_->context->stop foreach @children;
                 } else {
                     # if there are no children then
@@ -159,7 +159,7 @@ class Acktor::Mailbox {
             }
             elsif ($sig isa Acktor::System::Signals::Stopped) {
                 # ... what to do here
-                $state = Acktor::Mailbox::State->STOPPED;
+                $state = Acktor::System::Mailbox::State->STOPPED;
                 # we can destruct the mailbox here
                 $actor    = undef;
                 @messages = ();
@@ -174,7 +174,7 @@ class Acktor::Mailbox {
             elsif ($sig isa Acktor::System::Signals::Terminated) {
                 my $child = $sig->ref;
 
-                $logger->log(DEBUG, "$self got TERMINATED($child) while in state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
+                $logger->log(DEBUG, "$self got TERMINATED($child) while in state(".$Acktor::System::Mailbox::State::STATES[$state].")" ) if DEBUG;
 
                 $logger->log(INTERNALS, "CHILDREN: ", join ', ' => @children ) if INTERNALS;
                 $logger->log(INTERNALS, "BEFORE num children: ".scalar(@children) ) if INTERNALS;
@@ -184,12 +184,12 @@ class Acktor::Mailbox {
                 # TODO: the logic here needs some testing
                 # I am not 100% sure it is correct.
                 if (@children == 0) {
-                    $logger->log(DEBUG, "no more children, resuming state(".$Acktor::Mailbox::State::STATES[$state].")" ) if DEBUG;
-                    if ($state == Acktor::Mailbox::State->STOPPING) {
+                    $logger->log(DEBUG, "no more children, resuming state(".$Acktor::System::Mailbox::State::STATES[$state].")" ) if DEBUG;
+                    if ($state == Acktor::System::Mailbox::State->STOPPING) {
                         unshift @signals => Acktor::System::Signals::Stopped->new;
                         last;
                     }
-                    elsif ($state == Acktor::Mailbox::State->RESTARTING) {
+                    elsif ($state == Acktor::System::Mailbox::State->RESTARTING) {
                         unshift @signals => Acktor::System::Signals::Started->new;
                         last;
                     }

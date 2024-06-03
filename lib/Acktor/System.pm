@@ -4,7 +4,7 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
-use Acktor::Mailbox;
+use Acktor::System::Mailbox;
 use Acktor::Props;
 
 use Acktor::System::Timers;
@@ -51,7 +51,7 @@ class Acktor::System {
 
     method spawn_actor ($props, $parent=undef) {
         $logger->log( DEBUG, "spawn($props)" ) if DEBUG;
-        my $mailbox = Acktor::Mailbox->new( props => $props, system => $self, parent => $parent );
+        my $mailbox = Acktor::System::Mailbox->new( props => $props, system => $self, parent => $parent );
         $lookup{ $mailbox->ref->pid } = $mailbox;
         if (my $alias = $mailbox->props->alias ) {
             $lookup{ $alias } = $mailbox;

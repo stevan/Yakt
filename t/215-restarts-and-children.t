@@ -79,7 +79,7 @@ class Foo :isa(Acktor) {
 my $sys = Acktor::System->new->init(sub ($context) {
     $context->spawn(Acktor::Props->new(
         class      => 'Foo',
-        supervisor => Acktor::Supervisors::Restart->new
+        supervisor => Acktor::System::Supervisors::Restart->new
     ));
 });
 

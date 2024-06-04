@@ -26,7 +26,7 @@ class Acktor::System::Actors::Root :isa(Acktor) {
 
     method signal ($context, $signal) {
         if ($signal isa Acktor::System::Signals::Started) {
-            $logger->alert("STARTING SETUP") if DEBUG;
+            $logger->notification("STARTING SETUP") if DEBUG;
             $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
 
             $system = $context->spawn( Acktor::Props->new(
@@ -44,8 +44,8 @@ class Acktor::System::Actors::Root :isa(Acktor) {
                 ));
             } elsif ( refaddr $signal->ref == refaddr $users ) {
                 $logger->log(INTERNALS, sprintf 'Users Started for(%s) calling Init' => $context->self ) if INTERNALS;
-                $logger->alert("FINISHING SETUP") if DEBUG;
-                $logger->alert("STARTING INITIALIZATION") if DEBUG;
+                $logger->notification("FINISHING SETUP") if DEBUG;
+                $logger->notification("STARTING INITIALIZATION") if DEBUG;
                 $logger->log(INTERNALS, sprintf 'Got Ready from(%s) for(%s)' => $signal->ref, $context->self ) if INTERNALS;
                 try {
                     $logger->log(INTERNALS, "Running init callback for User Context(".$users->context.")" ) if INTERNALS;
@@ -53,13 +53,13 @@ class Acktor::System::Actors::Root :isa(Acktor) {
                 } catch ($e) {
                     $logger->log(ERROR, "!!!!!! Error running init callback for $context with ($e)" ) if ERROR;
                 }
-                $logger->alert("FINISHING INITIALIZATION") if DEBUG;
+                $logger->notification("FINISHING INITIALIZATION") if DEBUG;
             }
         } elsif ($signal isa Acktor::System::Signals::Stopping) {
-            $logger->alert("ENTERING SHUTDOWN") if DEBUG;
+            $logger->notification("ENTERING SHUTDOWN") if DEBUG;
             $logger->log(INTERNALS, sprintf 'Stopping %s' => $context->self ) if INTERNALS;
         } elsif ($signal isa Acktor::System::Signals::Stopped) {
-            $logger->alert("EXITING SHUTDOWN") if DEBUG;
+            $logger->notification("EXITING SHUTDOWN") if DEBUG;
             $logger->log(INTERNALS, sprintf 'Stopped %s' => $context->self ) if INTERNALS;
         }
     }

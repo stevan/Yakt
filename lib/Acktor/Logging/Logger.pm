@@ -81,5 +81,17 @@ class Acktor::Logging::Logger {
         );
     }
 
+    method notification ($label, $more_label=undef) {
+        my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
+        $width -= ((length $more_label) + 1) if $more_label;
+        $fh->print(
+            "\e[48;2;0;55;255;m",
+            "\e[38;2;55;55;255;m",
+            '>> ', $label, ' ', ('-' x $width), ($more_label ? (' ', $more_label) : ()),
+            "\e[0m",
+            "\n"
+        );
+    }
+
 }
 

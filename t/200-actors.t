@@ -19,31 +19,30 @@ class Joe :isa(Acktor) {
     our $STOPPING   = 0;
     our $STOPPED    = 0;
 
-    method signal ($context, $signal) {
-        if ($signal isa Acktor::System::Signals::Started) {
-            $STARTED++;
-            $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
-        } elsif ($signal isa Acktor::System::Signals::Stopping) {
-            $STOPPING++;
-            $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::System::Signals::Restarting) {
-            $RESTARTED++;
-            $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::System::Signals::Stopped) {
-            $STOPPED++;
-            $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
-        }
+    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
+        $STARTED++;
+        $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
     }
 
-    method apply ($context, $message) {
-        if ($message isa Hello) {
-            $MESSAGED++;
-            $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
-            $context->stop;
-            return true;
-        } else {
-            return false;
-        }
+    method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
+        $STOPPING++;
+        $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
+    }
+
+    method on_restarting :Signal(Acktor::System::Signals::Restarting) ($context, $signal) {
+        $RESTARTED++;
+        $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
+    }
+
+    method on_stopped :Signal(Acktor::System::Signals::Stopped) ($context, $signal) {
+        $STOPPED++;
+        $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
+    }
+
+    method hello :Receive(Hello) ($context, $message) {
+        $MESSAGED++;
+        $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
+        $context->stop;
     }
 }
 

@@ -212,7 +212,9 @@ class Acktor::System::Mailbox {
             my $msg = shift @msgs;
             try {
                 $behavior->receive_message($actor, $context, $msg)
-                    or push @unhandled => $msg;
+                    or do {
+                        push @unhandled => $msg;
+                    };
             } catch ($e) {
                 chomp $e;
 

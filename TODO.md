@@ -4,10 +4,6 @@
 
 ## Shutdown
 
-- don't just stop() the Root, but instead send it a Shutdown signal
-    - this can then institute a controlled shutdown
-    - this will allow us to handle the dead-letter-queue accordingly
-
 - detect the shutdown precursors better
     - we need to also be able to catch zombies
         - and not just loop forever ...

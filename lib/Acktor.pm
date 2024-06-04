@@ -21,5 +21,38 @@ class Acktor {
     }
 
     method signal ($context, $message) {}
+
+    ## ...
+
+    my %ATTRIBUTES;
+    my %RECEIVERS;
+    my %HANDLERS;
+    sub FETCH_RECEIVERS ($pkg) { $RECEIVERS{ $pkg } }
+    sub FETCH_HANDLERS  ($pkg) {  $HANDLERS{ $pkg } }
+    sub FETCH_CODE_ATTRIBUTES  ($pkg, $code) { $ATTRIBUTES{ $pkg }{ $code } }
+    sub MODIFY_CODE_ATTRIBUTES ($pkg, $code, @attrs) {
+        grep { $_ !~ /^(Receive|Signal)/ }
+        map  {
+            if ($_ =~ /^(Receive|Signal)/) {
+                $ATTRIBUTES{ $pkg }{ $code } = $_;
+
+                my $type;
+                if ($_ =~ /^(Receive|Signal)\((.*)\)$/ ) {
+                    $type = $2;
+                }
+                else {
+                    die "You must specify a type to Receive/Signal not $_";
+                }
+
+                if ($_ =~ /^Receive/) {
+                    $RECEIVERS{ $pkg }{ $type } = $code;
+                } elsif ($_ =~ /^Signal/) {
+                    $HANDLERS{ $pkg }{ $type } = $code;
+                }
+            }
+            $_;
+        }
+        @attrs;
+    }
 }
 

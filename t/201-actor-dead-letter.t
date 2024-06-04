@@ -26,13 +26,13 @@ class Joe :isa(Acktor) {
             $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
         } elsif ($signal isa Acktor::System::Signals::Stopping) {
             $STOPPING++;
-            $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
+            $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO;
         } elsif ($signal isa Acktor::System::Signals::Restarting) {
             $RESTARTED++;
-            $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
+            $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO;
         } elsif ($signal isa Acktor::System::Signals::Stopped) {
             $STOPPED++;
-            $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
+            $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO;
         }
     }
 

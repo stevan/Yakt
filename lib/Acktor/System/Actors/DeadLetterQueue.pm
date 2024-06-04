@@ -35,6 +35,7 @@ class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
             message => $message
         );
         $logger->log(WARN, "*** DEAD LETTER(".$dead_letters[-1].") ***" ) if WARN;
+        return true;
     }
 
     method signal ($context, $signal) {

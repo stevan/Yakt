@@ -7,6 +7,9 @@ use builtin      qw[ blessed refaddr true false ];
 class Acktor::Behavior {
     use Acktor::Logging;
 
+    field $receivers :param = +{};
+    field $handlers  :param = +{};
+
     field $logger;
 
     ADJUST {
@@ -15,11 +18,22 @@ class Acktor::Behavior {
 
     method receive_message ($actor, $context, $message) {
         $logger->log(INTERNALS, sprintf "Received ! Message($message) for ".$context->self ) if INTERNALS;
-        $actor->apply($context, $message);
+        if (my $method = $receivers->{ blessed $message }) {
+            $actor->$method( $context, $message );
+            return true;
+        }
+        else {
+            return $actor->apply($context, $message);
+        }
     }
 
     method receive_signal  ($actor, $context, $signal)  {
         $logger->log(INTERNALS, sprintf "Received ! Signal($signal) for ".$context->self ) if INTERNALS;
-        $actor->signal($context, $signal);
+        if (my $method = $handlers->{ blessed $signal }) {
+            $actor->$method( $context, $signal );
+        } else {
+            $actor->signal($context, $signal);
+        }
     }
 }
+

@@ -16,7 +16,8 @@ class Acktor::Props {
     field $args       :param = {};
     field $alias      :param = undef;
     field $supervisor :param = undef;
-    field $behavior   :param = undef;
+
+    field $behavior;
 
     field $logger;
 
@@ -28,7 +29,6 @@ class Acktor::Props {
     method alias { $alias }
 
     method with_supervisor ($s) { $supervisor = $s; $self }
-    method with_behavior   ($b) { $behavior   = $b; $self }
 
     method new_actor {
         $logger->log(DEBUG, "$self creating new actor($class)" ) if DEBUG;
@@ -36,7 +36,12 @@ class Acktor::Props {
     }
 
     method new_supervisor { $supervisor //= Acktor::System::Supervisors::Stop->new }
-    method new_behavior   { $behavior   //= Acktor::Behavior->new          }
+    method new_behavior   {
+        $behavior //= Acktor::Behavior->new(
+            receivers => $class->FETCH_RECEIVERS,
+            handlers  => $class->FETCH_HANDLERS,
+        );
+    }
 
     method to_string { "Props[$class]" }
 }

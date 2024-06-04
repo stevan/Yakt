@@ -131,10 +131,25 @@ class Acktor::System {
         $logger->log(DEBUG, 'Creating root actor ... ') if DEBUG;
         $root = $self->spawn_actor( $root_props );
 
+        my $ticks = 0;
+        my $start = time();
+
         while (1) {
 
+            my $start_tick = time();
             # tick ...
             $self->tick;
+            my $end_tick = time() - $start_tick;
+            $ticks++
+
+            $logger->bubble(
+                'System Stats',
+                [
+                    (sprintf '%12s : %08d'  =>         'tick', $ticks),
+                    (sprintf '%12s : %.03f' => 'current tick', $end_tick),
+                    (sprintf '%12s : %.03f' => 'average tick', (time() - $start) / $ticks),
+                ]
+            ) if DEBUG;
 
             $logger->bubble(
                 'Actor Tree',

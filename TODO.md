@@ -2,6 +2,14 @@
 # TODO
 <!---------------------------------------------------------------------------->
 
+## Shutdown
+
+- don't just stop() the Root, but instead send it a Shutdown signal
+    - this can then institute a controlled shutdown
+
+- detect the shutdown precursors better
+    - we need to also be able to catch zombies
+
 ## IO
 
 - build actors for this
@@ -21,6 +29,11 @@
 ## Child Supervision
 
 - need to add this
+
+## Errors
+
+- need to distinguish between errors to be caught, and fatal errors which
+  should start the shutdown process
 
 <!---------------------------------------------------------------------------->
 # Maybe

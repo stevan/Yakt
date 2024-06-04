@@ -41,6 +41,11 @@ class Acktor::System::IO {
     method tick ($timeout) {
         local $! = 0;
 
+        if (!@selectors && !$timeout) {
+            $logger->log( DEBUG, "... nothing to do, looping" ) if DEBUG;
+            return;
+        }
+
         $logger->log( DEBUG, "tick w/ timeout($timeout) ..." ) if DEBUG;
 
         my @to_watch = grep $_->is_active, @selectors;
@@ -69,19 +74,19 @@ class Acktor::System::IO {
 
             if ($watcher->watch_for_read) {
                 push @{ $to_read{ $fh } //= [] } => $watcher;
-                $logger->log( DEBUG, "... adding fh($fh) to select read" ) if DEBUG;
+                $logger->log( INTERNALS, "... adding fh(".blessed($fh).") to select read" ) if INTERNALS;
                 $readers->add( $fh );
             }
 
             if ($watcher->watch_for_write) {
                 push @{ $to_write{ $fh } //= [] } => $watcher;
-                $logger->log( DEBUG, "... adding fh($fh) to select write" ) if DEBUG;
+                $logger->log( INTERNALS, "... adding fh(".blessed($fh).") to select write" ) if INTERNALS;
                 $writers->add( $fh );
             }
 
             if ($watcher->watch_for_error) {
                 push @{ $got_error{ $fh } //= [] } => $watcher;
-                $logger->log( DEBUG, "... adding fh($fh) to select error" ) if DEBUG;
+                $logger->log( INTERNALS, "... adding fh(".blessed($fh).") to select error" ) if INTERNALS;
                 $errors->add( $fh );
             }
         }
@@ -89,13 +94,15 @@ class Acktor::System::IO {
         my ($r, $w, $e) = IO::Select::select($readers, $writers, $errors, $timeout);
 
         if (!defined $r && !defined $w && !defined $e) {
-            $logger->log( DEBUG, "... no events to see, looping" ) if DEBUG;
+            $logger->log( DEBUG, "... no events found, looping" ) if DEBUG;
             return;
         }
 
+        $logger->log( DEBUG, "... got IO events" ) if DEBUG;
         map $_->got_error, map $_->@*, @got_error{ @$e } if $e;
         map $_->can_read,  map $_->@*, @to_read  { @$r } if $r;
         map $_->can_write, map $_->@*, @to_write { @$w } if $w;
+        $logger->log( DEBUG, "... finished processing IO events" ) if DEBUG;
     }
 
 }

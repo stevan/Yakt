@@ -54,8 +54,6 @@ class Acktor::System::Mailbox {
     my $PID_SEQ = 0;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-
         $state   = Acktor::System::Mailbox::State->STARTING;
         $ref     = Acktor::Ref->new( pid => ++$PID_SEQ );
         $context = Acktor::Context->new( ref => $ref, mailbox => $self, system => $system );
@@ -63,10 +61,12 @@ class Acktor::System::Mailbox {
         $supervisor = $props->new_supervisor;
         $behavior   = $props->new_behavior;
 
+        $logger = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
+
         push @signals => Acktor::System::Signals::Started->new;
     }
 
-    method to_string { "Mailbox( $ref )" }
+    method to_string { sprintf "Mailbox(%s)[%03d]" => $props->class, $ref->pid }
 
     method parent   { $parent   }
     method children { @children }
@@ -108,14 +108,14 @@ class Acktor::System::Mailbox {
 
     method tick {
 
-        $logger->line($self->to_string) if DEBUG;
+        $logger->line("start $self") if DEBUG;
 
         my @sigs = @signals;
         @signals = ();
 
          while (@sigs) {
             my $sig = shift @sigs;
-            $logger->log(INTERNALS, "%% GOT SIGNAL($sig)" ) if INTERNALS;
+            $logger->log(INTERNALS, "Got signal($sig)" ) if INTERNALS;
 
             if ($sig isa Acktor::System::Signals::Started) {
                 $state = Acktor::System::Mailbox::State->ALIVE;
@@ -165,7 +165,7 @@ class Acktor::System::Mailbox {
                 @messages = ();
 
                 if ($parent) {
-                    $logger->log(DEBUG, "$self is Stopped, notifying $parent" ) if DEBUG;
+                    $logger->log(DEBUG, "is Stopped, notifying parent($parent)" ) if DEBUG;
                     $parent->context->notify( Acktor::System::Signals::Terminated->new( ref => $ref ) );
                 }
                 # and exit
@@ -174,7 +174,7 @@ class Acktor::System::Mailbox {
             elsif ($sig isa Acktor::System::Signals::Terminated) {
                 my $child = $sig->ref;
 
-                $logger->log(DEBUG, "$self got TERMINATED($child) while in state(".$Acktor::System::Mailbox::State::STATES[$state].")" ) if DEBUG;
+                $logger->log(INTERNALS, "got TERMINATED($child) while in state(".$Acktor::System::Mailbox::State::STATES[$state].")" ) if INTERNALS;
 
                 $logger->log(INTERNALS, "CHILDREN: ", join ', ' => @children ) if INTERNALS;
                 $logger->log(INTERNALS, "BEFORE num children: ".scalar(@children) ) if INTERNALS;
@@ -184,7 +184,7 @@ class Acktor::System::Mailbox {
                 # TODO: the logic here needs some testing
                 # I am not 100% sure it is correct.
                 if (@children == 0) {
-                    $logger->log(DEBUG, "no more children, resuming state(".$Acktor::System::Mailbox::State::STATES[$state].")" ) if DEBUG;
+                    $logger->log(INTERNALS, "no more children, resuming state(".$Acktor::System::Mailbox::State::STATES[$state].")" ) if INTERNALS;
                     if ($state == Acktor::System::Mailbox::State->STOPPING) {
                         unshift @signals => Acktor::System::Signals::Stopped->new;
                         last;
@@ -198,7 +198,10 @@ class Acktor::System::Mailbox {
             }
         }
 
-        return unless $self->is_alive;
+        unless ($self->is_alive) {
+            $logger->line("$self in state(".$Acktor::System::Mailbox::State::STATES[$state].") ... skipping message processing") if DEBUG;
+            return;
+        }
 
         my @msgs  = @messages;
         @messages = ();
@@ -209,6 +212,8 @@ class Acktor::System::Mailbox {
                 $behavior->receive_message($actor, $context, $msg);
             } catch ($e) {
                 chomp $e;
+
+                $logger->log(ERROR, "got Error while receiving message($msg), ... supervising") if ERROR;
 
                 my $action = $supervisor->supervise( $self, $e );
 
@@ -228,6 +233,7 @@ class Acktor::System::Mailbox {
             }
         }
 
+        $logger->line("done $self") if DEBUG;
         return;
     }
 

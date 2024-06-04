@@ -16,7 +16,7 @@ class Acktor::Context {
     field $logger;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__."[ ".$mailbox->props->class."<".$ref->pid."> ]") if LOG_LEVEL;
+        $logger = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
 
         $ref->set_context( $self );
     }
@@ -39,14 +39,14 @@ class Acktor::Context {
     }
 
     method send_message ($to, $message) {
-        $logger->log(DEBUG, "send_message($to, $message)" ) if DEBUG;
+        $logger->log(INTERNALS, "send_message($to, $message)" ) if INTERNALS;
         $system->enqueue_message( $to, $message );
     }
 
     method schedule (%options) { $system->schedule_timer( %options ) }
 
     method stop {
-        $logger->log(DEBUG, "stop($ref)[".$ref->pid."]" ) if DEBUG;
+        $logger->log(DEBUG, "stop($ref)" ) if DEBUG;
         $system->despawn_actor( $ref );
     }
 
@@ -57,6 +57,6 @@ class Acktor::Context {
     method restart { $mailbox->restart }
 
     method to_string {
-        sprintf 'Context{ %s }' => $ref->pid;
+        sprintf 'Context(%s)[%03d]' => $mailbox->props->class, $ref->pid;
     }
 }

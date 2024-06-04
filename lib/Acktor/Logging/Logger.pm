@@ -14,14 +14,14 @@ class Acktor::Logging::Logger {
         2 => "\e[93m",
         3 => "\e[91m",
         4 => "\e[92m",
-        5 => "\e[95m",
+        5 => "\e[34m",
     );
     state %level_map = (
         1 => $level_color_map{1}.".o(INFO)\e[0m",
         2 => $level_color_map{2}."^^[WARN]\e[0m",
         3 => $level_color_map{3}."!{ERROR}\e[0m",
         4 => $level_color_map{4}."?<DEBUG>\e[0m",
-        5 => $level_color_map{5}."~%<INTERNALS>\e[0m",
+        5 => $level_color_map{5}."~%<GUTS>\e[0m",
     );
     state %target_to_color;
 
@@ -51,7 +51,7 @@ class Acktor::Logging::Logger {
     method header ($label) {
         my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
         $fh->print(
-            "\e[38;2;225;225;225;m",
+            "\e[38;2;200;200;200;m",
             '== ', $label, ' ', ('=' x $width),
             "\e[0m",
             "\n"

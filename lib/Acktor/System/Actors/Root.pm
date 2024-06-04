@@ -35,6 +35,7 @@ class Acktor::System::Actors::Root :isa(Acktor) {
             ));
 
         } elsif ($signal isa Acktor::System::Signals::Ready) {
+                $logger->log(INTERNALS, sprintf 'Got Ready from(%s) for(%s)' => $signal->ref, $context->self ) if INTERNALS;
             if ( refaddr $signal->ref == refaddr $system ) {
                 $logger->log(INTERNALS, sprintf 'System Started for(%s) starting User' => $context->self ) if INTERNALS;
 
@@ -45,16 +46,14 @@ class Acktor::System::Actors::Root :isa(Acktor) {
             } elsif ( refaddr $signal->ref == refaddr $users ) {
                 $logger->log(INTERNALS, sprintf 'Users Started for(%s) calling Init' => $context->self ) if INTERNALS;
                 $logger->notification("FINISHING SETUP") if DEBUG;
-                $logger->notification("STARTING INITIALIZATION") if DEBUG;
-                $logger->log(INTERNALS, sprintf 'Got Ready from(%s) for(%s)' => $signal->ref, $context->self ) if INTERNALS;
+                $logger->log(DEBUG, "System is ready, staring initialization...") if DEBUG;
                 try {
-                    $logger->log(INTERNALS, "Running init callback for User Context(".$users->context.")" ) if INTERNALS;
+                    $logger->notification("STARTING INITIALIZATION") if DEBUG;
                     $init->($users->context);
-                    $logger->log(INTERNALS, "init callback has been run in User Context(".$users->context.")" ) if INTERNALS;
+                    $logger->notification("FINISHING INITIALIZATION") if DEBUG;
                 } catch ($e) {
                     $logger->log(ERROR, "!!!!!! Error running init callback for $context with ($e)" ) if ERROR;
                 }
-                $logger->notification("FINISHING INITIALIZATION") if DEBUG;
             }
         } elsif ($signal isa Acktor::System::Signals::Stopping) {
             $logger->notification("ENTERING SHUTDOWN") if DEBUG;

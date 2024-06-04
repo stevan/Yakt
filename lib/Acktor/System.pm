@@ -16,6 +16,7 @@ class Acktor::System {
     use Acktor::Logging;
 
     field $root;
+    field $root_props;
 
     field %lookup;
 
@@ -50,7 +51,7 @@ class Acktor::System {
     }
 
     method spawn_actor ($props, $parent=undef) {
-        $logger->log( DEBUG, "spawn($props)" ) if DEBUG;
+        $logger->log( INTERNALS, "spawn($props)" ) if INTERNALS;
         my $mailbox = Acktor::System::Mailbox->new( props => $props, system => $self, parent => $parent );
         $lookup{ $mailbox->ref->pid } = $mailbox;
         if (my $alias = $mailbox->props->alias ) {
@@ -61,7 +62,7 @@ class Acktor::System {
     }
 
     method despawn_actor ($ref) {
-        $logger->log( DEBUG, "despawn($ref) for ".$ref->context->props->class ."[".$ref->pid."]" ) if DEBUG;
+        $logger->log( INTERNALS, "despawn($ref) for ".$ref->context->props->class ."[".$ref->pid."]" ) if INTERNALS;
         if (my $mailbox = $lookup{ $ref->pid }) {
             $lookup{ $ref->pid } = $lookup{ '//sys/dead_letters' };
             if (my $alias = $mailbox->props->alias ) {
@@ -75,7 +76,7 @@ class Acktor::System {
     }
 
     method enqueue_message ($to, $message) {
-        $logger->log( DEBUG, "enqueue_message to($to) message($message)" ) if DEBUG;
+        $logger->log( INTERNALS, "enqueue_message to($to) message($message)" ) if INTERNALS;
         if (my $mailbox = $lookup{ $to->pid }) {
             $mailbox->enqueue_message( $message );
         }
@@ -85,12 +86,10 @@ class Acktor::System {
     }
 
     method init ($init) {
-        $root = $self->spawn_actor(
-            Acktor::Props->new(
-                class => 'Acktor::System::Actors::Root',
-                alias => '//',
-                args  => { init => $init }
-            )
+        $root_props = Acktor::Props->new(
+            class => 'Acktor::System::Actors::Root',
+            alias => '//',
+            args  => { init => $init }
         );
         $self;
     }
@@ -99,14 +98,14 @@ class Acktor::System {
         my @to_run = grep $_->to_be_run, @mailboxes;
 
         if (@to_run) {
-            $logger->log( WARN, "... running (".scalar(@to_run).") mailboxe(s)" ) if WARN;
+            $logger->log( DEBUG, "... found (".scalar(@to_run).") mailbox(s) to run" ) if DEBUG;
             # run all the mailboxes ...
             $_->tick foreach @to_run;
             # remove the stopped ones
             @mailboxes = grep !$_->is_stopped, @mailboxes;
         }
         else {
-            $logger->log( WARN, "... nothing to run" ) if WARN;
+            $logger->log( DEBUG, "... nothing to run" ) if DEBUG;
         }
     }
 
@@ -121,26 +120,24 @@ class Acktor::System {
         # watchers
         $io->tick( $timers->should_wait );
 
-        # ... check to see if we should wait
-        #if (my $wait_for = $timers->should_wait) {
-        #    $logger->log( WARN, "... waiting ($wait_for)" ) if WARN;
-        #    $timers->wait( $wait_for );
-        #}
-
         $logger->header('end:tick['.$TICK.']') if DEBUG;
         $TICK++;
     }
 
     method loop_until_done {
         $logger->line('begin:loop') if DEBUG;
+
+        $logger->log(DEBUG, 'Creating root actor ... ') if DEBUG;
+        $root = $self->spawn_actor( $root_props );
+
         while (1) {
+
             # tick ...
             $self->tick;
 
             if (DEBUG) {
                 $logger->line('Acktor Hierarchy') if DEBUG;
                 $self->print_actor_tree($root);
-                $logger->line('') if DEBUG;
             }
 
             # if we have timers or watchers, then loop again ...

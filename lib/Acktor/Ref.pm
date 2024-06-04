@@ -15,11 +15,12 @@ class Acktor::Ref {
     field $context;
     field $logger;
 
-    ADJUST {
-        $logger = Acktor::Logging->logger("Ref[ ${pid} ]") if LOG_LEVEL;
+    method set_context ($c) {
+        $context = $c;
+        $logger  = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
+        $self
     }
 
-    method set_context ($c) { $context = $c; $self }
     method context { $context }
 
     method pid { $pid }
@@ -30,6 +31,6 @@ class Acktor::Ref {
     }
 
     method to_string {
-        sprintf '<%s>[%03d]' => $context->props->class, $pid;
+        sprintf 'Ref(%s)[%03d]' => $context->props->class, $pid;
     }
 }

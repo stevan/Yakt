@@ -7,13 +7,15 @@ use builtin      qw[ blessed refaddr true false ];
 class Acktor::System::IO::Selector {
     use Acktor::Logging;
 
+    use overload '""' => 'to_string';
+
     field $ref :param;
     field $fh  :param;
 
     field $logger;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__."<$fh>[$ref]") if LOG_LEVEL;
+        $logger = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
 
         $fh->autoflush(1);
         $fh->blocking(0);
@@ -35,6 +37,8 @@ class Acktor::System::IO::Selector {
     method can_read;
     method can_write;
     method got_error;
+
+    method to_string { sprintf "Selector(%s)->%s", blessed $fh, $ref->to_string }
 }
 
 __END__

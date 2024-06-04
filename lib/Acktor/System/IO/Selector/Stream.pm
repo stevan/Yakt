@@ -28,17 +28,17 @@ class Acktor::System::IO::Selector::Stream :isa(Acktor::System::IO::Selector) {
     method is_active { $reading || $writing }
 
     method can_read {
-        $self->logger->log( WARN, "got Can Read" ) if WARN;
+        $self->logger->log( DEBUG, "got Can Read" ) if DEBUG;
         $self->ref->context->notify( Acktor::System::Signals::IO::CanRead->new );
     }
 
     method can_write {
-        $self->logger->log( WARN, "got Can Write" ) if WARN;
+        $self->logger->log( DEBUG, "got Can Write" ) if DEBUG;
         $self->ref->context->notify( Acktor::System::Signals::IO::CanWrite->new );
     }
 
     method got_error {
-        $self->logger->log( WARN, "got Error" ) if WARN;
+        $self->logger->log( DEBUG, "got Error" ) if DEBUG;
         $self->ref->context->notify( Acktor::System::Signals::IO::GotError->new );
     }
 }

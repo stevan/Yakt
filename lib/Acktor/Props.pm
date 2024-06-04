@@ -21,7 +21,7 @@ class Acktor::Props {
     field $logger;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+        $logger = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
     }
 
     method class { $class }
@@ -31,7 +31,7 @@ class Acktor::Props {
     method with_behavior   ($b) { $behavior   = $b; $self }
 
     method new_actor {
-        $logger->log(DEBUG, "++ $self -> new_actor($class)" ) if DEBUG;
+        $logger->log(DEBUG, "$self creating new actor($class)" ) if DEBUG;
         $class->new( %$args )
     }
 

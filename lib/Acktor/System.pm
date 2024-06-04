@@ -179,7 +179,7 @@ class Acktor::System {
                 if ( $usr->is_alive && !$usr->children && !(grep $_->to_be_run, @mailboxes) ) {
                     $logger->alert('... nothing more to do, getting ready to stop!') if DEBUG;
                     # and if not, then we can shutdown ...
-                    $root->context->stop;
+                    $usr->context->stop;
                 }
             }
 

@@ -1,19 +1,34 @@
+<!---------------------------------------------------------------------------->
 # TODO
+<!---------------------------------------------------------------------------->
 
 ## IO
+
+- build actors for this
+    - Stream
+    - Socket
 
 ## Context
 
 - add method for adding Selectors
     - go via System
 
+## Supervisors
+
+- Supervisors need to be configurable for given errors
+    - some kind of error dispatch table (`match`)
+
 ## Child Supervision
 
 - need to add this
 
+<!---------------------------------------------------------------------------->
+# Maybe
+<!---------------------------------------------------------------------------->
+
 ## Address
 
-- Re-add these ...
+- Re-add these ???
 
 - don't do `0002@localhost:3000/foo/bar`
     - do `localhost:3000/foo/bar/2`
@@ -23,11 +38,7 @@
 ## Messages
 
 - make all messages be able to stringify and desctructure-able
-
-## Supervisors
-
-- Supervisors need to be configurable for given errors
-    - some kind of error dispatch table (`match`)I a
+    - but do I really want to enforce a base class?
 
 ## Perl Stuff
 
@@ -39,7 +50,10 @@ check.
 Also check out https://metacpan.org/pod/strictures#VERSION-2 for this as well.
 
 
-## Syntax Sketch
+<!---------------------------------------------------------------------------->
+# Syntax Sketch
+<!---------------------------------------------------------------------------->
+
 
 ```ruby
 

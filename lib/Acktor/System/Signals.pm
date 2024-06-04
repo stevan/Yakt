@@ -11,4 +11,5 @@ package Acktor::System::Signals {
     use Acktor::System::Signals::Restarting;
     use Acktor::System::Signals::Stopped;
     use Acktor::System::Signals::Terminated;
+    use Acktor::System::Signals::Ready;
 }

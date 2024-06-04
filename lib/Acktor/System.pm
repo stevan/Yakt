@@ -147,10 +147,10 @@ class Acktor::System {
                  || $io->has_active_selectors;
 
             # if no timers, see if we have active children ...
-            if (my $usr = $lookup{ '//usr' } ) {
-                if ( $usr->is_alive && !$usr->children ) {
+            if ( my $usr = $lookup{ '//usr' } ) {
+                if ( $usr->is_alive && !$usr->children && !($lookup{ '//' }->to_be_run) ) {
+                    $logger->alert('... getting ready to stop!') if DEBUG;
                     # and if not, then we can shutdown ...
-                    $logger->alert("ENTERING SHUTDOWN") if DEBUG;
                     $root->context->stop;
                 }
             }

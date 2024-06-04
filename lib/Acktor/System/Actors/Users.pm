@@ -5,11 +5,10 @@ use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
 use Acktor;
+use Acktor::System::Signals;
 
 class Acktor::System::Actors::Users :isa(Acktor) {
     use Acktor::Logging;
-
-    field $init :param;
 
     field $logger;
 
@@ -19,13 +18,8 @@ class Acktor::System::Actors::Users :isa(Acktor) {
 
     method signal ($context, $signal) {
         if ($signal isa Acktor::System::Signals::Started) {
-            $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
-            try {
-                $logger->log(INTERNALS, "Running init callback for $context" ) if INTERNALS;
-                $init->($context);
-            } catch ($e) {
-                $logger->log(ERROR, "!!!!!! Error running init callback for $context with ($e)" ) if ERROR;
-            }
+            $logger->log(INTERNALS, sprintf 'Started %s notifying parent(%s)' => $context->self, $context->parent ) if INTERNALS;
+            $context->parent->context->notify( Acktor::System::Signals::Ready->new( ref => $context->self ) );
         }
     }
 }

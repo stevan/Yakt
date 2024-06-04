@@ -50,6 +50,7 @@ class Acktor::System::Actors::Root :isa(Acktor) {
                 try {
                     $logger->log(INTERNALS, "Running init callback for User Context(".$users->context.")" ) if INTERNALS;
                     $init->($users->context);
+                    $logger->log(INTERNALS, "init callback has been run in User Context(".$users->context.")" ) if INTERNALS;
                 } catch ($e) {
                     $logger->log(ERROR, "!!!!!! Error running init callback for $context with ($e)" ) if ERROR;
                 }

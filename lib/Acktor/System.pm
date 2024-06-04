@@ -148,8 +148,8 @@ class Acktor::System {
 
             # if no timers, see if we have active children ...
             if ( my $usr = $lookup{ '//usr' } ) {
-                if ( $usr->is_alive && !$usr->children && !($lookup{ '//' }->to_be_run) ) {
-                    $logger->alert('... getting ready to stop!') if DEBUG;
+                if ( $usr->is_alive && !$usr->children && !(grep $_->to_be_run, @mailboxes) ) {
+                    $logger->alert('... nothing more to do, getting ready to stop!') if DEBUG;
                     # and if not, then we can shutdown ...
                     $root->context->stop;
                 }

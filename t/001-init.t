@@ -12,7 +12,6 @@ my $COUNT = 0;
 
 my $sys = Acktor::System->new->init(sub ($context) {
     $COUNT++;
-    say $COUNT;
 });
 
 $sys->loop_until_done;

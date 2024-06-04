@@ -85,8 +85,8 @@ class Acktor::Logging::Logger {
         my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
         $width -= ((length $more_label) + 1) if $more_label;
         $fh->print(
-            "\e[48;2;0;55;255;m",
-            "\e[38;2;55;55;255;m",
+            "\e[48;2;100;100;200;m",
+            "\e[38;2;0;0;100;m",
             '>> ', $label, ' ', ('-' x $width), ($more_label ? (' ', $more_label) : ()),
             "\e[0m",
             "\n"

@@ -111,7 +111,8 @@ class Acktor::System {
 
     method tick {
         state $TICK = 0;
-        $logger->header('begin:tick', "[$TICK]") if DEBUG;
+        my $t = sprintf '(%08d)' => $TICK;
+        $logger->header('begin:tick', $t) if DEBUG;
 
         # timers
         $timers->tick;
@@ -120,7 +121,7 @@ class Acktor::System {
         # watchers
         $io->tick( $timers->should_wait );
 
-        $logger->header('end:tick', "[$TICK]") if DEBUG;
+        $logger->header('end:tick', $t) if DEBUG;
         $TICK++;
     }
 
@@ -136,7 +137,7 @@ class Acktor::System {
             $self->tick;
 
             $logger->bubble(
-                'Acktor Hierarchy',
+                'Actor Tree',
                 [ $self->print_actor_tree($root) ]
             ) if DEBUG;
 

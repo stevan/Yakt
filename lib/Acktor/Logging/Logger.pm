@@ -48,11 +48,12 @@ class Acktor::Logging::Logger {
         $self->write($self->format_message($target, $level, @msg));
     }
 
-    method header ($label) {
+    method header ($label, $more_label=undef) {
         my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
+        $width -= ((length $more_label) + 1) if $more_label;
         $fh->print(
             "\e[38;2;200;200;200;m",
-            '== ', $label, ' ', ('=' x $width),
+            '== ', $label, ' ', ('=' x $width), ($more_label ? (' ', $more_label) : ()),
             "\e[0m",
             "\n"
         );

@@ -135,10 +135,10 @@ class Acktor::System {
             # tick ...
             $self->tick;
 
-            if (DEBUG) {
-                $logger->line('Acktor Hierarchy') if DEBUG;
-                $self->print_actor_tree($root);
-            }
+            $logger->bubble(
+                'Acktor Hierarchy',
+                [ $self->print_actor_tree($root) ]
+            ) if DEBUG;
 
             # if we have timers or watchers, then loop again ...
             next if $timers->has_active_timers
@@ -161,15 +161,17 @@ class Acktor::System {
     }
 
     method print_actor_tree ($ref, $indent='') {
+        my @out;
         if (refaddr $ref == refaddr $root && $ref->context->is_stopped) {
-            $logger->log(DEBUG, 'No Active Actors' ) if DEBUG;
+            push @out => 'No Active Actors';
         } else {
-            $logger->log(DEBUG, sprintf '%s<%s>[%03d]' => $indent, $ref->context->props->class, $ref->pid ) if DEBUG;
+            push @out => sprintf '%s<%s>[%03d]' => $indent, $ref->context->props->class, $ref->pid;;
         }
-        $indent .= '  ';
+        $indent .= '    ';
         foreach my $child ( $ref->context->children ) {
-            $self->print_actor_tree( $child, $indent );
+            push @out => $self->print_actor_tree( $child, $indent );
         }
+        return @out;
     }
 
 }

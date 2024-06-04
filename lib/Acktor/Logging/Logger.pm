@@ -93,5 +93,18 @@ class Acktor::Logging::Logger {
         );
     }
 
+    method bubble ($label, $contents) {
+        my $width = ($TERM_WIDTH - 4);
+        my @lines = ref $contents ? @$contents : split /\n/ => $contents;
+        $fh->print(
+            "\e[38;2;200;100;200;m",
+            '╭─',(('─' x ($width - (length($label) + 2))), ' ', $label, ' '),'─╮',"\n",
+            (map { ('│ ',(sprintf("%-${width}s", $_)),' │',"\n",) } @lines),
+            '╰─',('─' x $width),'─╯',
+            "\e[0m",
+            "\n"
+        );
+    }
+
 }
 

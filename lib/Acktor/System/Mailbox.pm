@@ -240,7 +240,12 @@ class Acktor::System::Mailbox {
 
         $logger->line("done $self") if DEBUG;
 
-        return @unhandled;
+        return map {
+            Acktor::System::Actors::DeadLetterQueue::DeadLetter->new(
+                to      => $ref,
+                message => $_,
+            )
+        } @unhandled;
     }
 
 }

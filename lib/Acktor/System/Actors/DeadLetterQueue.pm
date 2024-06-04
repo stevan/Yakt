@@ -9,11 +9,12 @@ use Acktor::System::Signals;
 
 # TODO - move to a Acktor::Messages:: or something
 class Acktor::System::Actors::DeadLetterQueue::DeadLetter {
+    use overload '""' => \&to_string;
     field $to      :param;
     field $message :param;
     method to      { $to      }
     method message { $message }
-    method to_string { sprintf '%s(%03d) (%s)' => $to->context->props->class, $to->pid, "$message" }
+    method to_string { sprintf '%s (%s)' => $to, $message }
 }
 
 class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
@@ -30,11 +31,8 @@ class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
     method dead_letters { @dead_letters }
 
     method apply ($context, $message) {
-        push @dead_letters => Acktor::System::Actors::DeadLetterQueue::DeadLetter->new(
-            to      => $context->self,
-            message => $message
-        );
-        $logger->log(WARN, "*** DEAD LETTER(".$dead_letters[-1].") ***" ) if WARN;
+        $logger->log(WARN, "Got Dead Letter ($message)" ) if WARN;
+        push @dead_letters => $message;
         return true;
     }
 

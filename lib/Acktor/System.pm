@@ -66,7 +66,7 @@ class Acktor::System {
     method despawn_actor ($ref) {
         $logger->log( INTERNALS, "despawn($ref) for ".$ref->context->props->class ."[".$ref->pid."]" ) if INTERNALS;
         if (my $mailbox = $lookup{ $ref->pid }) {
-            $lookup{ $ref->pid } = $lookup{ '//sys/dead_letters' };
+            delete $lookup{ $ref->pid };
             if (my $alias = $mailbox->props->alias ) {
                 delete $lookup{ $alias };
             }
@@ -84,6 +84,12 @@ class Acktor::System {
         }
         else {
             $logger->log( ERROR, "ACTOR NOT FOUND: $to FOR MESSAGE: $message" ) if ERROR;
+            $lookup{ '//sys/dead_letters' }->enqueue_message(
+                Acktor::System::Actors::DeadLetterQueue::DeadLetter->new(
+                    to      => $to,
+                    message => $message
+                )
+            );
         }
     }
 
@@ -106,7 +112,7 @@ class Acktor::System {
 
             # handle any unhandled messages
             if (@unhandled) {
-                $logger->log(WARN, "Got (".(scalar @unhandled).") dead letters ...") if WARN;
+                $logger->log(INTERNALS, "Got (".(scalar @unhandled).") dead letters ") if INTERNALS;
                 $lookup{ '//sys/dead_letters' }->enqueue_message($_) foreach @unhandled;
             }
 

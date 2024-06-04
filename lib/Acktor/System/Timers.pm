@@ -141,9 +141,9 @@ class Acktor::System::Timers {
     }
 
     method tick {
-        $logger->line( "begin:timers" ) if DEBUG;
-
         return unless @timers;
+
+        $logger->line( "begin:timers" ) if DEBUG;
 
         my @timers_to_run = $self->pending_timers;
         return unless @timers_to_run;

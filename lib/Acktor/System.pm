@@ -140,6 +140,7 @@ class Acktor::System {
             if (DEBUG) {
                 $logger->line('Acktor Hierarchy') if DEBUG;
                 $self->print_actor_tree($root);
+                $logger->line('') if DEBUG;
             }
 
             # if we have timers or watchers, then loop again ...

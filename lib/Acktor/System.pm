@@ -111,7 +111,7 @@ class Acktor::System {
 
     method tick {
         state $TICK = 0;
-        $logger->header('begin:tick['.$TICK.']') if DEBUG;
+        $logger->header('begin:tick', "[$TICK]") if DEBUG;
 
         # timers
         $timers->tick;
@@ -120,7 +120,7 @@ class Acktor::System {
         # watchers
         $io->tick( $timers->should_wait );
 
-        $logger->header('end:tick['.$TICK.']') if DEBUG;
+        $logger->header('end:tick', "[$TICK]") if DEBUG;
         $TICK++;
     }
 

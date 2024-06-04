@@ -55,6 +55,7 @@ class Joe :isa(Acktor) {
             $self->logger->log(INFO, "!!! max restarts, ... stopping". $message->total ." times") if INFO;
             $TOTAL_HELLO = $message->total;
             $context->stop;
+            return true;
         }
     }
 }

@@ -206,10 +206,13 @@ class Acktor::System::Mailbox {
         my @msgs  = @messages;
         @messages = ();
 
+        my @unhandled;
+
         while (@msgs) {
             my $msg = shift @msgs;
             try {
-                $behavior->receive_message($actor, $context, $msg);
+                $behavior->receive_message($actor, $context, $msg)
+                    or push @unhandled => $msg;
             } catch ($e) {
                 chomp $e;
 
@@ -234,7 +237,8 @@ class Acktor::System::Mailbox {
         }
 
         $logger->line("done $self") if DEBUG;
-        return;
+
+        return @unhandled;
     }
 
 }

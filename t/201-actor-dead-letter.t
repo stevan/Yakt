@@ -9,6 +9,7 @@ use Test::More;
 use ok 'Acktor::System';
 
 class Hello {}
+class Goodbye {}
 
 class Joe :isa(Acktor) {
     use Acktor::Logging;
@@ -39,9 +40,11 @@ class Joe :isa(Acktor) {
         if ($message isa Hello) {
             $MESSAGED++;
             $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
-            $context->stop;
+            $context->self->send(Goodbye->new);
             return true;
         } else {
+            $self->logger->log(INFO, "Unknown Message { Actor($self), $context, message($message) }" ) if INFO;
+            $context->stop;
             return false;
         }
     }

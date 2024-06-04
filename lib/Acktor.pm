@@ -17,6 +17,7 @@ class Acktor {
 
     method apply ($context, $message) {
         $self->logger->log( WARN, "Unhandled message! $context => $message" ) if WARN;
+        return false;
     }
 
     method signal ($context, $message) {}

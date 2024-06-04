@@ -102,7 +102,14 @@ class Acktor::System {
         if (@to_run) {
             $logger->log( DEBUG, "... found (".scalar(@to_run).") mailbox(s) to run" ) if DEBUG;
             # run all the mailboxes ...
-            $_->tick foreach @to_run;
+            my @unhandled = map $_->tick, @to_run;
+
+            # handle any unhandled messages
+            if (@unhandled) {
+                $logger->log(WARN, "Got (".(scalar @unhandled).") dead letters ...") if WARN;
+                $lookup{ '//sys/dead_letters' }->enqueue_message($_) foreach @unhandled;
+            }
+
             # remove the stopped ones
             @mailboxes = grep !$_->is_stopped, @mailboxes;
         }

@@ -20,7 +20,6 @@ class Acktor::System::Actors::System :isa(Acktor) {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
     }
 
-
     method signal ($context, $signal) {
         if ($signal isa Acktor::System::Signals::Started) {
             $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;

@@ -126,6 +126,7 @@ class Google :isa(Acktor) {
     method apply ($context, $message) {
         $MESSAGED++;
         $self->logger->log(INFO, "HELLO" ) if INFO;
+        return true;
     }
 }
 

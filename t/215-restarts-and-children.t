@@ -30,6 +30,7 @@ class Foo :isa(Acktor) {
             $FORCED_RESTART++;
             die "Going to Restart!"
         }
+        return true;
     }
 
     method signal ($context, $signal) {

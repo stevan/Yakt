@@ -25,28 +25,15 @@ class Acktor::System::IO::Reader::LineBuffered {
 
     method got_error {   $error }
     method got_eof   {     $eof }
-    method is_empty  { ! @buffer }
+    method is_empty  { !@buffer }
 
     method flush_buffer { my @b = @buffer; @buffer = (); @b; }
 
     method parse_buffer {
         return unless $buffer =~ /\n/;
-
-        my @line = split /\n/ => $buffer;
-        #use Data::Dumper;
-        #warn Dumper \@line;
-
-        if ($buffer !~ /\n$/) {
-            #warn "B Buffer: $buffer";
-            $buffer = pop @line;
-            #warn "A Buffer: $buffer";
-        }
-        else {
-            #warn "BUFFER: $buffer";
-            $buffer = '';
-        }
-
-        push @buffer => @line;
+        my @lines = split /\n/ => $buffer;
+        $buffer = $buffer !~ /\n$/ ? pop @lines : '';
+        push @buffer => @lines;
     }
 
     method read ($fh) {

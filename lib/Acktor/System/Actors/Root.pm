@@ -56,7 +56,6 @@ class Acktor::System::Actors::Root :isa(Acktor) {
                 }
             }
         } elsif ($signal isa Acktor::System::Signals::Stopping) {
-            $logger->notification("ENTERING SHUTDOWN") if DEBUG;
             $logger->log(INTERNALS, sprintf 'Stopping %s' => $context->self ) if INTERNALS;
         } elsif ($signal isa Acktor::System::Signals::Stopped) {
             $logger->notification("EXITING SHUTDOWN") if DEBUG;
@@ -65,6 +64,7 @@ class Acktor::System::Actors::Root :isa(Acktor) {
             my $ref = $signal->ref;
             $logger->log(INTERNALS, "Got Terminated from $ref") if INTERNALS;
             if (refaddr $ref == refaddr $users) {
+                $logger->notification("ENTERING SHUTDOWN") if DEBUG;
                 $logger->log(INTERNALS, sprintf 'Users Stopped, shutting down %s' => $system ) if INTERNALS;
                 $system->context->stop;
             } elsif (refaddr $ref == refaddr $system) {

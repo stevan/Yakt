@@ -16,9 +16,11 @@ my $fh = IO::File->new;
 
 $fh->open(__FILE__, 'r');
 
+my @BUFFER;
+
 my $line_no = 0;
 do {
-    say join "\n" => map { sprintf '%4d : %s', ++$line_no, $_ } $b->flush_buffer
+    push @BUFFER => $b->flush_buffer
         if $b->read($fh);
 
     if (my $e = $b->got_error) {
@@ -27,9 +29,8 @@ do {
     }
 } until $b->got_eof;
 
-if ($b->got_eof) {
-    warn "GOT EOF!";
-}
+ok($b->got_eof, '... got the EOF we expected');
+is($BUFFER[-1], '# THE END', '... got the expected last line');
 
 $fh->close;
 

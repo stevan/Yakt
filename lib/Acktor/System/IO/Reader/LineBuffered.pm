@@ -15,7 +15,7 @@ class Acktor::System::IO::Reader::LineBuffered {
     field $buffer = '';
     field $eof    = false;
     field $error;
-    field @lines;
+    field @buffer;
 
     field $logger;
 
@@ -25,20 +25,20 @@ class Acktor::System::IO::Reader::LineBuffered {
 
     method got_error {   $error }
     method got_eof   {     $eof }
-    method is_empty  { ! @lines }
+    method is_empty  { ! @buffer }
 
-    method flush_buffer { my @l = @lines; @lines = (); @l; }
+    method flush_buffer { my @b = @buffer; @buffer = (); @b; }
 
     method parse_buffer {
         return unless $buffer =~ /\n/;
 
-        my @temp = split /\n/ => $buffer;
+        my @line = split /\n/ => $buffer;
         #use Data::Dumper;
-        #warn Dumper \@temp;
+        #warn Dumper \@line;
 
         if ($buffer !~ /\n$/) {
             #warn "B Buffer: $buffer";
-            $buffer = pop @temp;
+            $buffer = pop @line;
             #warn "A Buffer: $buffer";
         }
         else {
@@ -46,7 +46,7 @@ class Acktor::System::IO::Reader::LineBuffered {
             $buffer = '';
         }
 
-        push @lines => @temp;
+        push @buffer => @line;
     }
 
     method read ($fh) {
@@ -71,9 +71,9 @@ class Acktor::System::IO::Reader::LineBuffered {
         }
 
         # returns true if we
-        # have read lines
+        # have read buffer
         # and false if not
-        return !! scalar @lines;
+        return !! scalar @buffer;
     }
 
 }

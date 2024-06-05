@@ -32,6 +32,9 @@ do {
 ok($b->got_eof, '... got the EOF we expected');
 is($BUFFER[-1], '# THE END', '... got the expected last line');
 
+#my $i = 0;
+#warn join "\n" => map { sprintf '%4d : %s' => ++$i, $_ } @BUFFER;
+
 $fh->close;
 
 done_testing;

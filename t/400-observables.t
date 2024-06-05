@@ -39,11 +39,37 @@ class Observerable :isa(Acktor) {
 
     method subscribe :Receive(Subscribe) ($context, $message) {
         my $subscriber = $message->subscriber;
-        foreach my $i ( 0 .. 10 ) {
+
+        foreach my $i ( 0, 1 ) {
             $subscriber->send( OnNext->new( value => $i ) );
         }
-        $subscriber->send( OnCompleted->new );
-        $context->stop;
+
+        $context->schedule( after => 0.2, callback => sub {
+            foreach my $i ( 2, 3 ) {
+                $subscriber->send( OnNext->new( value => $i ) );
+            }
+
+            $context->schedule( after => 0.1, callback => sub {
+                foreach my $i ( 4, 5 ) {
+                    $subscriber->send( OnNext->new( value => $i ) );
+                }
+            });
+        });
+
+        $context->schedule( after => 0.4, callback => sub {
+            foreach my $i ( 6 .. 9 ) {
+                $subscriber->send( OnNext->new( value => $i ) );
+            }
+
+            $context->schedule( after => 0.2, callback => sub {
+                $subscriber->send( OnNext->new( value => 10 ) );
+            });
+        });
+
+        $context->schedule( after => 0.8, callback => sub {
+            $subscriber->send( OnCompleted->new );
+            $context->stop;
+        });
     }
 }
 

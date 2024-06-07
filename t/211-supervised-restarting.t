@@ -29,34 +29,34 @@ class Joe :isa(Acktor) {
 
     method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
         $STARTED++;
-        $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
+        $context->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
     }
 
     method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
         $STOPPING++;
-        $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
+        $context->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
     }
 
     method on_restarting :Signal(Acktor::System::Signals::Restarting) ($context, $signal) {
         $RESTARTED++;
-        $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
+        $context->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
     }
 
     method on_stopped :Signal(Acktor::System::Signals::Stopped) ($context, $signal) {
         $STOPPED++;
-        $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
+        $context->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
     }
 
     method hello :Receive(Hello) ($context, $message) {
         $MESSAGED++;
-        $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
-        $self->logger->log(INFO, "... called ". $message->total ." times") if INFO;
+        $context->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
+        $context->logger->log(INFO, "... called ". $message->total ." times") if INFO;
         if ($RESTARTED < 5) {
             $context->self->send($message->count);
             die 'OH NOES!';
         }
         else {
-            $self->logger->log(INFO, "!!! max restarts, ... stopping". $message->total ." times") if INFO;
+            $context->logger->log(INFO, "!!! max restarts, ... stopping". $message->total ." times") if INFO;
             $TOTAL_HELLO = $message->total;
             $context->stop;
             return true;

@@ -13,6 +13,12 @@ class Acktor::System::IO::Selector::Stream :isa(Acktor::System::IO::Selector) {
     field $reading :param = false;
     field $writing :param = false;
 
+    field $logger;
+
+    ADJUST {
+        $logger = Acktor::Logging->logger('System::Timers') if LOG_LEVEL;
+    }
+
     method watch_for_read  { $reading }
     method watch_for_write { $writing }
     method watch_for_error { false    }
@@ -28,17 +34,17 @@ class Acktor::System::IO::Selector::Stream :isa(Acktor::System::IO::Selector) {
     method is_active { $reading || $writing }
 
     method can_read {
-        $self->logger->log( DEBUG, "got Can Read" ) if DEBUG;
+        $logger->log( DEBUG, "got Can Read" ) if DEBUG;
         $self->ref->context->notify( Acktor::System::Signals::IO::CanRead->new );
     }
 
     method can_write {
-        $self->logger->log( DEBUG, "got Can Write" ) if DEBUG;
+        $logger->log( DEBUG, "got Can Write" ) if DEBUG;
         $self->ref->context->notify( Acktor::System::Signals::IO::CanWrite->new );
     }
 
     method got_error {
-        $self->logger->log( DEBUG, "got Error" ) if DEBUG;
+        $logger->log( DEBUG, "got Error" ) if DEBUG;
         $self->ref->context->notify( Acktor::System::Signals::IO::GotError->new );
     }
 }

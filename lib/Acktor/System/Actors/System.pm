@@ -14,13 +14,9 @@ class Acktor::System::Actors::System :isa(Acktor) {
 
     field $dead_letter_queue;
 
-    field $logger;
-
-    ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-    }
-
     method signal ($context, $signal) {
+        my $logger = $context->logger;
+
         if ($signal isa Acktor::System::Signals::Started) {
             $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;
             $dead_letter_queue = $context->spawn( Acktor::Props->new(

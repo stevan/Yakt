@@ -22,23 +22,17 @@ class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
 
     field @dead_letters;
 
-    field $logger;
-
-    ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-    }
-
     method dead_letters { @dead_letters }
 
     method apply ($context, $message) {
-        $logger->log(WARN, "Got Dead Letter ($message)" ) if WARN;
+        $context->logger->log(WARN, "Got Dead Letter ($message)" ) if WARN;
         push @dead_letters => $message;
         return true;
     }
 
     method signal ($context, $signal) {
         if ($signal isa Acktor::System::Signals::Started) {
-            $logger->log(INTERNALS, sprintf 'Started %s notifying parent(%s)' => $context->self, $context->parent ) if INTERNALS;
+            $context->logger->log(INTERNALS, sprintf 'Started %s notifying parent(%s)' => $context->self, $context->parent ) if INTERNALS;
             $context->parent->context->notify( Acktor::System::Signals::Ready->new( ref => $context->self ) );
         }
     }

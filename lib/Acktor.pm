@@ -7,14 +7,8 @@ use builtin      qw[ blessed refaddr true false ];
 class Acktor {
     use Acktor::Logging;
 
-    field $logger;
-
-    ADJUST {
-        $logger = Acktor::Logging->logger(sprintf '%s[%d]' => blessed($self), refaddr($self)) if LOG_LEVEL;
-    }
-
     method apply ($context, $message) {
-        $self->logger->log( WARN, "Unhandled message! $context => $message" ) if WARN;
+        $context->logger->log( WARN, "Unhandled message! $message" ) if WARN;
         return false;
     }
 

@@ -25,14 +25,14 @@ class Foo :isa(Acktor) {
     );
 
     method hello :Receive(Bar) ($context, $message) {
-        $self->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
+        $context->logger->log(INFO, "HELLO JOE! => { Actor($self), $context, message($message) }" ) if INFO;
         $FORCED_RESTART++;
         die "Going to Restart!"
     }
 
     method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
         $STARTED++;
-        $self->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
+        $context->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
         if ( $depth <= $max ) {
             $context->spawn(Acktor::Props->new(
                 class => 'Foo',
@@ -63,17 +63,17 @@ class Foo :isa(Acktor) {
 
     method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
         $STOPPING++;
-        $self->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
+        $context->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
     }
 
     method on_restarting :Signal(Acktor::System::Signals::Restarting) ($context, $signal) {
         $RESTARTED++;
-        $self->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
+        $context->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
     }
 
     method on_stopped :Signal(Acktor::System::Signals::Stopped) ($context, $signal) {
         $STOPPED++;
-        $self->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
+        $context->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
     }
 
 }

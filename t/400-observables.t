@@ -81,18 +81,18 @@ class Observer :isa(Acktor) {
     our $ERROR;
 
     method on_next :Receive(OnNext) ($context, $message) {
-        $self->logger->log(INFO, "OnNext called" ) if INFO;
+        $context->logger->log(INFO, "OnNext called" ) if INFO;
         push @RESULTS => $message->value;
     }
 
     method on_completed :Receive(OnCompleted) ($context, $message) {
-        $self->logger->log(INFO, "OnCompleted called" ) if INFO;
+        $context->logger->log(INFO, "OnCompleted called" ) if INFO;
         $context->stop;
         $COMPLETED++;
     }
 
     method on_error :Receive(OnError) ($context, $message) {
-        $self->logger->log(INFO, "OnError called" ) if INFO;
+        $context->logger->log(INFO, "OnError called" ) if INFO;
         $ERROR = $message->error;
     }
 }

@@ -15,6 +15,12 @@ class Acktor::System::IO::Selector::Socket :isa(Acktor::System::IO::Selector) {
     field $reading    :param = false;
     field $writing    :param = false;
 
+    field $logger;
+
+    ADJUST {
+        $logger = Acktor::Logging->logger('System::Timers') if LOG_LEVEL;
+    }
+
     method watch_for_read  { $reading || $listening  }
     method watch_for_write { $writing || $connecting }
     method watch_for_error { $connecting }
@@ -35,30 +41,30 @@ class Acktor::System::IO::Selector::Socket :isa(Acktor::System::IO::Selector) {
 
     method can_read {
         if ( $listening ) {
-            $self->logger->log( DEBUG, "got Can Accept" ) if DEBUG;
+            $logger->log( DEBUG, "got Can Accept" ) if DEBUG;
             $self->ref->context->notify( Acktor::System::Signals::IO::CanAccept->new );
         } else {
-            $self->logger->log( DEBUG, "got Can Read" ) if DEBUG;
+            $logger->log( DEBUG, "got Can Read" ) if DEBUG;
             $self->ref->context->notify( Acktor::System::Signals::IO::CanRead->new );
         }
     }
 
     method can_write {
         if ( $connecting ) {
-            $self->logger->log( DEBUG, "got Is Connected" ) if DEBUG;
+            $logger->log( DEBUG, "got Is Connected" ) if DEBUG;
             $self->ref->context->notify( Acktor::System::Signals::IO::IsConnected->new );
         } else {
-            $self->logger->log( DEBUG, "got Can Write" ) if DEBUG;
+            $logger->log( DEBUG, "got Can Write" ) if DEBUG;
             $self->ref->context->notify( Acktor::System::Signals::IO::CanWrite->new );
         }
     }
 
     method got_error {
         if ( $connecting ) {
-            $self->logger->log( DEBUG, "got Connection Error" ) if DEBUG;
+            $logger->log( DEBUG, "got Connection Error" ) if DEBUG;
             $self->ref->context->notify( Acktor::System::Signals::IO::GotConnectionError->new );
         } else {
-            $self->logger->log( DEBUG, "got Error" ) if DEBUG;
+            $logger->log( DEBUG, "got Error" ) if DEBUG;
             $self->ref->context->notify( Acktor::System::Signals::IO::GotError->new );
         }
     }

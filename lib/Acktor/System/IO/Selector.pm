@@ -12,16 +12,10 @@ class Acktor::System::IO::Selector {
     field $ref :param;
     field $fh  :param;
 
-    field $logger;
-
     ADJUST {
-        $logger = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
-
         $fh->autoflush(1);
         $fh->blocking(0);
     }
-
-    method logger { $logger }
 
     method ref { $ref }
     method fh  { $fh  }

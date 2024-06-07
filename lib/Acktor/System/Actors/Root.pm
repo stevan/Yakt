@@ -18,13 +18,9 @@ class Acktor::System::Actors::Root :isa(Acktor) {
     field $system;
     field $users;
 
-    field $logger;
-
-    ADJUST {
-        $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-    }
-
     method signal ($context, $signal) {
+        my $logger = $context->logger;
+
         if ($signal isa Acktor::System::Signals::Started) {
             $logger->notification("STARTING SETUP") if DEBUG;
             $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;

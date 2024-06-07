@@ -77,7 +77,7 @@ class IO::Stream::Reader :isa(Acktor) {
     }
 }
 
-class Observer :isa(Acktor) {
+class Reader :isa(Acktor) {
     use Acktor::Logging;
 
     field $fh :param;
@@ -131,14 +131,14 @@ my $fh2 = IO::File->new;
 $fh2->open('t/300-io.t', 'r');
 
 my $sys = Acktor::System->new->init(sub ($context) {
-    my $o1 = $context->spawn(Acktor::Props->new( class => 'Observer', args => { fh => $fh1 } ));
-    my $o2 = $context->spawn(Acktor::Props->new( class => 'Observer', args => { fh => $fh2 } ));
+    my $o1 = $context->spawn(Acktor::Props->new( class => 'Reader', args => { fh => $fh1 } ));
+    my $o2 = $context->spawn(Acktor::Props->new( class => 'Reader', args => { fh => $fh2 } ));
 });
 
 $sys->loop_until_done;
 
-is($Observer::BUFFERS{$fh1}->[-1], '# THE END', '... got the expected last line for fh 1');
-is($Observer::BUFFERS{$fh2}->[-1], 'done_testing;', '... got the expected last line for fh 2');
+is($Reader::BUFFERS{$fh1}->[-1], '# THE END', '... got the expected last line for fh 1');
+is($Reader::BUFFERS{$fh2}->[-1], 'done_testing;', '... got the expected last line for fh 2');
 
 done_testing;
 

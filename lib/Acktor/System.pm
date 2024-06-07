@@ -28,6 +28,8 @@ class Acktor::System {
 
     field $logger;
 
+    field $shutting_down = false;
+
     ADJUST {
         $logger = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
         $timers = Acktor::System::Timers->new;
@@ -90,6 +92,23 @@ class Acktor::System {
                     message => $message
                 )
             );
+        }
+    }
+
+    method shutdown {
+        if ($shutting_down) {
+            $logger->log( DEBUG, "Got Shutdown message ... already shutting down, please be patient" ) if DEBUG;
+        }
+        else {
+            $logger->log( DEBUG, "Got Shutdown message ..." ) if DEBUG;
+            if ( my $usr = $lookup{ '//usr' } ) {
+                $logger->log( DEBUG, "... found $usr to stop" ) if DEBUG;
+                $usr->context->stop;
+                $shutting_down = true;
+            } else {
+                $logger->log( ERROR, "... no User process found!" ) if ERROR;
+                $root->context->stop;
+            }
         }
     }
 

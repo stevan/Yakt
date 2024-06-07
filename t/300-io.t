@@ -20,6 +20,7 @@ class Google :isa(Acktor) {
     our $STOPPING   = 0;
     our $STOPPED    = 0;
     our $SUCCESS    = 0;
+    our $CONNECTED  = 0;
 
     field $watcher;
     field $timeout;
@@ -32,7 +33,11 @@ class Google :isa(Acktor) {
             my $google = IO::Socket::SSL->new(
                 PeerAddr => 'www.google.com:443',
                 Blocking => 0
-            ) || die 'OH NOES: Could not connect SSL to google!!';
+            ) || do {
+                $context->logger->log(ERROR, 'OH NOES: Could not connect SSL to google!!') if ERROR;
+                $context->system->shutdown;
+                return;
+            };
 
             $context->logger->log(INFO, sprintf 'Connected to %s' => $google ) if INFO;
 
@@ -47,6 +52,7 @@ class Google :isa(Acktor) {
             });
 
         } elsif ($signal isa Acktor::System::Signals::IO::IsConnected) {
+            $CONNECTED++;
             $context->logger->log(INFO, sprintf 'IsConnected %s' => $context->self ) if INFO;
             $timeout->cancel;
 
@@ -143,7 +149,9 @@ is($Google::RESTARTED, 0, '... got the expected restarted');
 is($Google::STARTED,   3, '... got the expected started');
 is($Google::STOPPING,  3, '... got the expected stopping');
 is($Google::STOPPED,   3, '... got the expected stopped');
-is($Google::SUCCESS,   3, '... got the expected success');
+is($Google::SUCCESS,
+    $Google::CONNECTED ? 3 : 0,
+    '... got the expected success (if we are connected or not)');
 
 done_testing;
 

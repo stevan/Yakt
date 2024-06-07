@@ -1,3 +1,4 @@
+#!perl
 
 use v5.38;
 use experimental qw[ class builtin try ];

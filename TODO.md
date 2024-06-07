@@ -2,12 +2,6 @@
 # TODO
 <!---------------------------------------------------------------------------->
 
-## Shutdown
-
-- detect the shutdown precursors better
-    - we need to also be able to catch zombies
-        - and not just loop forever ...
-
 ## IO
 
 - build actors for this
@@ -37,6 +31,12 @@
 
 - add exporters and constructors for Ready and Terminated as those are the only
   two which are used by Users
+
+## Shutdown
+
+- detect the shutdown precursors better
+    - we need to also be able to catch zombies
+        - and not just loop forever ...
 
 <!---------------------------------------------------------------------------->
 # Maybe

@@ -163,8 +163,14 @@ For instance, using the examples above, it can be seen that the list of messages
 
 ```
 
+class Open
 
-Acktor::Protocol->new
+
+Acktor::Protocol->new(IO::Streams)
+    ->accepts(ReadBytes)
+        ->reply(BytesRead)
+    ->accepts(WriteBytes)
+        ->reply(BytesWritten)
 
 
 

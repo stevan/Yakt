@@ -85,7 +85,7 @@ class Observer :isa(Acktor) {
     field $stream;
     field @lines;
 
-    our @BUFFER;
+    our %BUFFERS;
 
     method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
         $stream = $context->spawn(Acktor::Props->new( class => 'IO::Stream::Reader', args => {
@@ -111,7 +111,7 @@ class Observer :isa(Acktor) {
     method got_eof :Receive(GotEOF) ($context, $message) {
         $context->logger->log(INFO, "Got GotEOF ... dumping buffer") if INFO;
         $self->dump_buffer( $context );
-        @BUFFER = @lines;
+        $BUFFERS{$fh} = \@lines;
         $context->stop;
     }
 
@@ -122,17 +122,23 @@ class Observer :isa(Acktor) {
     }
 }
 
-my $fh = IO::File->new;
+my $fh1 = IO::File->new;
 
-$fh->open(__FILE__, 'r');
+$fh1->open(__FILE__, 'r');
+
+my $fh2 = IO::File->new;
+
+$fh2->open('t/300-io.t', 'r');
 
 my $sys = Acktor::System->new->init(sub ($context) {
-    my $o = $context->spawn(Acktor::Props->new( class => 'Observer', args => { fh => $fh } ));
+    my $o1 = $context->spawn(Acktor::Props->new( class => 'Observer', args => { fh => $fh1 } ));
+    my $o2 = $context->spawn(Acktor::Props->new( class => 'Observer', args => { fh => $fh2 } ));
 });
 
 $sys->loop_until_done;
 
-is($Observer::BUFFER[-1], '# THE END', '... got the expected last line');
+is($Observer::BUFFERS{$fh1}->[-1], '# THE END', '... got the expected last line for fh 1');
+is($Observer::BUFFERS{$fh2}->[-1], 'done_testing;', '... got the expected last line for fh 2');
 
 done_testing;
 

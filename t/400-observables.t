@@ -8,30 +8,28 @@ use Test::More;
 
 use ok 'Acktor::System';
 
-class Subscribe {
+class Subscribe :isa(Acktor::System::Messages::Command) {
     use overload '""' => \&to_string;
     field $subscriber :param;
     method subscriber { $subscriber }
     method to_string { "Subscribe(${subscriber}"}
 }
 
-class OnNext {
+class OnNext :isa(Acktor::System::Messages::Command) {
     use overload '""' => \&to_string;
     field $value :param;
     method value { $value }
     method to_string { "OnNext(${value})" }
 }
 
-class OnCompleted {
+class OnCompleted :isa(Acktor::System::Messages::Command){
     use overload '""' => \&to_string;
     method to_string { "OnCompleted()" }
 }
 
-class OnError {
+class OnError :isa(Acktor::System::Messages::Error) {
     use overload '""' => \&to_string;
-    field $error :param;
-    method error { $error }
-    method to_string { "OnError(${error})" }
+    method to_string { "OnError(".$self->error.")" }
 }
 
 class Observerable :isa(Acktor) {

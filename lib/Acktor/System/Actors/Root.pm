@@ -37,16 +37,16 @@ class Acktor::System::Actors::Root :isa(Acktor) {
         } elsif ($signal isa Acktor::System::Signals::Ready) {
                 $logger->log(INTERNALS, sprintf 'Got Ready from(%s) for(%s)' => $signal->ref, $context->self ) if INTERNALS;
             if ( refaddr $signal->ref == refaddr $system ) {
-                $logger->log(INTERNALS, sprintf 'System Started for(%s) starting User' => $context->self ) if INTERNALS;
+                $logger->log(INTERNALS, sprintf 'System is Started for(%s) ... now starting User' => $context->self ) if INTERNALS;
 
                 $users = $context->spawn( Acktor::Props->new(
                     class => 'Acktor::System::Actors::Users',
                     alias => '//usr',
                 ));
             } elsif ( refaddr $signal->ref == refaddr $users ) {
-                $logger->log(INTERNALS, sprintf 'Users Started for(%s) calling Init' => $context->self ) if INTERNALS;
+                $logger->log(INTERNALS, sprintf 'Users is Started for(%s) ... now calling &init' => $context->self ) if INTERNALS;
                 $logger->notification("FINISHING SETUP") if DEBUG;
-                $logger->log(DEBUG, "System is ready, staring initialization...") if DEBUG;
+                $logger->log(DEBUG, "System is ready, starting initialization...") if DEBUG;
                 try {
                     $logger->notification("STARTING INITIALIZATION") if DEBUG;
                     $init->($users->context);
@@ -65,7 +65,7 @@ class Acktor::System::Actors::Root :isa(Acktor) {
             $logger->log(INTERNALS, "Got Terminated from $ref") if INTERNALS;
             if (refaddr $ref == refaddr $users) {
                 $logger->notification("ENTERING SHUTDOWN") if DEBUG;
-                $logger->log(INTERNALS, sprintf 'Users Stopped, shutting down %s' => $system ) if INTERNALS;
+                $logger->log(INTERNALS, sprintf 'Users is Stopped, ... now shutting down %s' => $system ) if INTERNALS;
                 $system->context->stop;
             } elsif (refaddr $ref == refaddr $system) {
                 # TODO:
@@ -73,7 +73,7 @@ class Acktor::System::Actors::Root :isa(Acktor) {
                 # down before users is full shut down, but
                 # this shold not really happen, so we can punt
                 # on it for now.
-                $logger->log(INTERNALS, sprintf 'System Stopped, shutting down %s' => $context->self ) if INTERNALS;
+                $logger->log(INTERNALS, sprintf 'System is Stopped, ... now shutting down %s' => $context->self ) if INTERNALS;
                 $context->stop;
             }
         }

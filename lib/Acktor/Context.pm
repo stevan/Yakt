@@ -14,6 +14,7 @@ class Acktor::Context {
     field $mailbox :param;
 
     field $logger;
+    field $context_logger;
 
     ADJUST {
         $logger = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
@@ -55,6 +56,12 @@ class Acktor::Context {
     }
 
     method restart { $mailbox->restart }
+
+    method logger {
+        $context_logger //= Acktor::Logging->logger(
+            sprintf '%s[%03d]' => $mailbox->props->class, $ref->pid
+        );
+    }
 
     method to_string {
         sprintf 'Context(%s)[%03d]' => $mailbox->props->class, $ref->pid;

@@ -10,10 +10,8 @@ class Acktor {
     field $logger;
 
     ADJUST {
-        $logger = Acktor::Logging->logger(blessed $self) if LOG_LEVEL;
+        $logger = Acktor::Logging->logger(sprintf '%s[%d]' => blessed($self), refaddr($self)) if LOG_LEVEL;
     }
-
-    method logger { $logger }
 
     method apply ($context, $message) {
         $self->logger->log( WARN, "Unhandled message! $context => $message" ) if WARN;

@@ -8,21 +8,11 @@ use Test::More;
 
 use ok 'Acktor::System';
 
-class Query {
-    field $reply_to :param;
-    method reply_to { $reply_to }
-}
-
-class Command {}
-
-class PingPong::Ping     :isa(Query) {}
-class PingPong::Pong     :isa(Query) {}
-
-class PingPong::Reset    :isa(Command) {}
-
-class PingPong::NewGame   :isa(Query)   {}
-class PingPong::EndGame   :isa(Query)   {}
-class PingPong::GameOver  :isa(Command) {}
+class PingPong::Ping      :isa(Acktor::System::Messages::Query) {}
+class PingPong::Pong      :isa(Acktor::System::Messages::Query) {}
+class PingPong::NewGame   :isa(Acktor::System::Messages::Query) {}
+class PingPong::EndGame   :isa(Acktor::System::Messages::Query) {}
+class PingPong::GameOver  :isa(Acktor::System::Messages::Command) {}
 
 =pod
 
@@ -32,7 +22,6 @@ Acktor::Protocol->new(PingPong)
     ->accepts(StartGame)
     ->accepts(EndGame)
         ->reply(GameOver)
-    ->accepts(Reset)
     ->accepts(GameOver);
 
 =cut
@@ -45,21 +34,20 @@ class PingPong :isa(Acktor) {
     field $pings = 0;
     field $pongs = 0;
 
-    # ... reset the machine (turn it on and off again)
-
-    method reset :Receive(PingPong::Reset) ($context, $message) {
-        $context->logger->log(INFO, "Got reset!") if INFO;
-        $context->restart;
-    }
+    our $GAMES_PLAYED  = 0;
+    our $GAMES_ENDED   = 0;
+    our $TOTAL_BOUNCES = 0;
 
     # ... start/stop the game
 
     method new_game :Receive(PingPong::NewGame) ($context, $message) {
+        $GAMES_PLAYED++;
         $context->logger->log(INFO, "Got NewGame with ".$message->reply_to) if INFO;
         $message->reply_to->send(PingPong::Ping->new( reply_to => $context->self ));
     }
 
     method end_game :Receive(PingPong::EndGame) ($context, $message) {
+        $GAMES_ENDED++;
         $context->logger->log(INFO, "Got EndGame with ".$message->reply_to) if INFO;
         $message->reply_to->send(PingPong::GameOver->new);
         $context->self->send(PingPong::GameOver->new);
@@ -73,6 +61,7 @@ class PingPong :isa(Acktor) {
     ## ... playing the game
 
     method ping :Receive(PingPong::Ping) ($context, $message) {
+        $TOTAL_BOUNCES++;
         $pings++;
         $context->logger->log(INFO, "Pinged(${pings}) checking Bounces(".($pings+$pongs).") MaxBounces($max_bounces)") if INFO;
         if ( $max_bounces && ($pings + $pongs) >= $max_bounces ) {
@@ -85,6 +74,7 @@ class PingPong :isa(Acktor) {
     }
 
     method pong :Receive(PingPong::Pong) ($context, $message) {
+        $TOTAL_BOUNCES++;
         $pongs++;
         $context->logger->log(INFO, "Ponged(${pongs}) checking Bounces(".($pings+$pongs).") MaxBounces($max_bounces)") if INFO;
         if ( $max_bounces && ($pings + $pongs) >= $max_bounces ) {
@@ -107,6 +97,10 @@ my $sys = Acktor::System->new->init(sub ($context) {
 });
 
 $sys->loop_until_done;
+
+is($PingPong::GAMES_PLAYED,  1,  '... got the expected games played');
+is($PingPong::GAMES_ENDED,   1,  '... got the expected games ended');
+is($PingPong::TOTAL_BOUNCES, 10, '... got the expected total bounces');
 
 
 done_testing;

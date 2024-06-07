@@ -33,6 +33,11 @@
 - need to distinguish between errors to be caught, and fatal errors which
   should start the shutdown process
 
+## Signals
+
+- add exporters and constructors for Ready and Terminated as those are the only
+  two which are used by Users
+
 <!---------------------------------------------------------------------------->
 # Maybe
 <!---------------------------------------------------------------------------->
@@ -61,40 +66,4 @@ check.
 Also check out https://metacpan.org/pod/strictures#VERSION-2 for this as well.
 
 
-<!---------------------------------------------------------------------------->
-# Syntax Sketch
-<!---------------------------------------------------------------------------->
-
-
-```ruby
-
-class PingPong       :isa(Actor::Protocol) {}
-class PingPong::Ping :isa(Actor::Message)  {}
-class PingPong::Pong :isa(Actor::Message)  {}
-
-class Ping :isa(Acktor) {
-    field $pong;
-    field $count = 0;
-
-    method on_start :Signal(Started) {
-        $pong = spawn Props[Pong::, ping => context->self ];
-    }
-
-    method ping :Receive(PingPong::Ping) {
-        $count++;
-        $pong->send( PingPong::Pong->new );
-        if ($count > 9) {
-            context->stop;
-        }
-    }
-}
-
-class Pong :isa(Acktor) {
-    field $ping :param;
-
-    method Pong :Receive(PingPong::Pong) {
-        $ping->send( PingPong::Ping->new );
-    }
-}
-```
 

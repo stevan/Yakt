@@ -4,8 +4,10 @@ use v5.38;
 use experimental qw[ class builtin try ];
 use builtin      qw[ blessed refaddr true false ];
 
+use Acktor::Props;
 use Acktor::Ref;
 use Acktor::Context;
+
 use Acktor::System::Signals;
 
 class Acktor::System::Mailbox::State {

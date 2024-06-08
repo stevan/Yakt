@@ -8,24 +8,14 @@ use Test::More;
 
 use ok 'Acktor::System';
 
+use Acktor::Streams;
+
 use Acktor::System::Signals::IO;
 
 use Acktor::System::IO::Selector::Stream;
 
 use Acktor::System::IO::Reader::LineBuffered;
 use Acktor::System::IO::Writer::LineBuffered;
-
-class Acktor::Streams::OnNext {
-    field $value :param;
-    method value { $value }
-}
-
-class Acktor::Streams::OnCompleted {}
-
-class Acktor::Streams::OnError {
-    field $error :param;
-    method error { $error }
-}
 
 class Acktor::IO::Stream::ObservableReader :isa(Acktor) {
     use Acktor::Logging;

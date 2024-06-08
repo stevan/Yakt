@@ -8,24 +8,7 @@ use Test::More;
 
 use ok 'Acktor::System';
 
-class Acktor::Streams::Subscribe {
-    use overload '""' => \&to_string;
-    field $subscriber :param;
-    method subscriber { $subscriber }
-    method to_string { "Subscribe(${subscriber}"}
-}
-
-class Acktor::Streams::OnNext {
-    field $value :param;
-    method value { $value }
-}
-
-class Acktor::Streams::OnCompleted {}
-
-class Acktor::Streams::OnError {
-    field $error :param;
-    method error { $error }
-}
+use Acktor::Streams;
 
 class Observerable :isa(Acktor) {
     use Acktor::Logging;

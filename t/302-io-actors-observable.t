@@ -102,7 +102,7 @@ class BufferedFileReader :isa(Acktor) {
         }));
     }
 
-    method dump_buffer ($context) {
+    my method dump_buffer ($context) {
         my $num = 0;
         $context->logger->log(INFO, join "\n" => map { sprintf '%3d : %s', ++$num, $_ } @lines) if INFO;
     }

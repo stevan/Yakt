@@ -15,21 +15,23 @@ use Acktor::System::IO::Selector::Stream;
 use Acktor::System::IO::Reader::LineBuffered;
 use Acktor::System::IO::Writer::LineBuffered;
 
-class ReadLines :isa(Acktor::System::Messages::Message) {}
-
-class LinesRead :isa(Acktor::System::Messages::Message) {
-    field $lines :param;
-    method lines { @$lines }
+class Acktor::Streams::OnNext {
+    field $value :param;
+    method value { $value }
 }
 
-class GotEOF   :isa(Acktor::System::Messages::Message) {}
-class GotError :isa(Acktor::System::Messages::Error) {}
+class Acktor::Streams::OnCompleted {}
 
-class IO::Stream::Reader :isa(Acktor) {
+class Acktor::Streams::OnError {
+    field $error :param;
+    method error { $error }
+}
+
+class Acktor::IO::Stream::ObservableReader :isa(Acktor) {
     use Acktor::Logging;
 
-    field $fh       :param;
     field $observer :param;
+    field $fh       :param;
 
     field $watcher;
 
@@ -46,6 +48,7 @@ class IO::Stream::Reader :isa(Acktor) {
         $context->logger->log(INFO, "Started, creating watcher for fh($fh) ... ") if INFO;
         $watcher = Acktor::System::IO::Selector::Stream->new( ref => $context->self, fh => $fh );
         $context->system->io->add_selector( $watcher );
+        $watcher->is_reading = true;
     }
 
     method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
@@ -57,32 +60,32 @@ class IO::Stream::Reader :isa(Acktor) {
 
     method can_read :Signal(Acktor::System::Signals::IO::CanRead) ($context, $signal) {
         if ($read_buffer->read($fh)) {
-            my @lines = $read_buffer->flush_buffer;
-            $observer->send(LinesRead->new( lines => \@lines ));
+            $context->logger->log(INFO, "Read bytes from fh($fh)") if INFO;
+            if (my @lines = $read_buffer->flush_buffer) {
+                $context->logger->log(INFO, "Got ".(scalar @lines)." lines reading fh($fh)") if INFO;
+                $observer->send(Acktor::Streams::OnNext->new( value => $_ ))
+                    foreach @lines;
+            }
+            else {
+                $context->logger->log(INFO, "No lines read from fh($fh)") if INFO;
+            }
         }
 
         if (my $e = $read_buffer->got_error) {
             $context->logger->log(ERROR, "Got error($e) reading fh($fh)") if ERROR;
-            $observer->send(GotError->new( error => $e ));
+            $observer->send(Acktor::Streams::OnError->new( error => $e ));
             $watcher->is_reading = false;
         }
 
         if ($read_buffer->got_eof) {
             $context->logger->log(INFO, "Got EOF reading fh($fh)") if INFO;
-            $observer->send(GotEOF->new);
+            $observer->send(Acktor::Streams::OnCompleted->new);
             $watcher->is_reading = false;
         }
     }
-
-    # ... IO Messages
-
-    method read_lines :Receive(ReadLines) ($context, $message) {
-        $context->logger->log(INFO, "Got ReadLines ...") if INFO;
-        $watcher->is_reading = true;
-    }
 }
 
-class Reader :isa(Acktor) {
+class BufferedFileReader :isa(Acktor) {
     use Acktor::Logging;
 
     field $fh :param;
@@ -93,12 +96,10 @@ class Reader :isa(Acktor) {
     our %BUFFERS;
 
     method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
-        $stream = $context->spawn(Acktor::Props->new( class => 'IO::Stream::Reader', args => {
+        $stream = $context->spawn(Acktor::Props->new( class => 'Acktor::IO::Stream::ObservableReader', args => {
             observer => $context->self,
             fh       => $fh
         }));
-
-        $stream->send(ReadLines->new);
     }
 
     method dump_buffer ($context) {
@@ -106,22 +107,21 @@ class Reader :isa(Acktor) {
         $context->logger->log(INFO, join "\n" => map { sprintf '%3d : %s', ++$num, $_ } @lines) if INFO;
     }
 
-    method got_lines :Receive(LinesRead) ($context, $message) {
-        $context->logger->log(INFO, "Got LinesRead ...") if INFO;
-        push @lines => $message->lines;
-        my $num = 0;
-        $context->logger->log(INFO, join "\n" => map { sprintf '%3d : %s', ++$num, $_ } $message->lines) if INFO;
+    method got_line :Receive(Acktor::Streams::OnNext) ($context, $message) {
+        my $line = $message->value;
+        $context->logger->log(INFO, "Got OnNext with line($line) ...") if INFO;
+        push @lines => $line;
     }
 
-    method got_eof :Receive(GotEOF) ($context, $message) {
-        $context->logger->log(INFO, "Got GotEOF ... dumping buffer") if INFO;
+    method got_eof :Receive(Acktor::Streams::OnCompleted) ($context, $message) {
+        $context->logger->log(INFO, "Got OnCompleted ... dumping buffer") if INFO;
         $self->dump_buffer( $context );
         $BUFFERS{$fh} = \@lines;
         $context->stop;
     }
 
-    method got_error :Receive(GotError) ($context, $message) {
-        $context->logger->log(INFO, "Got GotError ... dumping buffer") if INFO;
+    method got_error :Receive(Acktor::Streams::OnError) ($context, $message) {
+        $context->logger->log(INFO, "Got OnError ... dumping buffer") if INFO;
         $self->dump_buffer( $context );
         $context->stop;
     }
@@ -136,14 +136,14 @@ my $fh2 = IO::File->new;
 $fh2->open('t/300-io.t', 'r');
 
 my $sys = Acktor::System->new->init(sub ($context) {
-    my $o1 = $context->spawn(Acktor::Props->new( class => 'Reader', args => { fh => $fh1 } ));
-    my $o2 = $context->spawn(Acktor::Props->new( class => 'Reader', args => { fh => $fh2 } ));
+    my $o1 = $context->spawn(Acktor::Props->new( class => 'BufferedFileReader', args => { fh => $fh1 } ));
+    my $o2 = $context->spawn(Acktor::Props->new( class => 'BufferedFileReader', args => { fh => $fh2 } ));
 });
 
 $sys->loop_until_done;
 
-is($Reader::BUFFERS{$fh1}->[-1], '# THE END', '... got the expected last line for fh 1');
-is($Reader::BUFFERS{$fh2}->[-1], 'done_testing;', '... got the expected last line for fh 2');
+is($BufferedFileReader::BUFFERS{$fh1}->[-1], '# THE END', '... got the expected last line for fh 1');
+is($BufferedFileReader::BUFFERS{$fh2}->[-1], 'done_testing;', '... got the expected last line for fh 2');
 
 done_testing;
 

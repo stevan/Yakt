@@ -220,7 +220,7 @@ class Acktor::System::Mailbox {
             } catch ($e) {
                 chomp $e;
 
-                $logger->log(ERROR, "got Error while receiving message($msg), ... supervising") if ERROR;
+                $logger->log(ERROR, "got Error($e) while receiving message($msg), ... supervising") if ERROR;
 
                 my $action = $supervisor->supervise( $self, $e );
 

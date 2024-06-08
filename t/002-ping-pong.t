@@ -8,11 +8,11 @@ use Test::More;
 
 use ok 'Acktor::System';
 
-class PingPong::Ping      :isa(Acktor::System::Messages::Query) {}
-class PingPong::Pong      :isa(Acktor::System::Messages::Query) {}
-class PingPong::NewGame   :isa(Acktor::System::Messages::Query) {}
-class PingPong::EndGame   :isa(Acktor::System::Messages::Query) {}
-class PingPong::GameOver  :isa(Acktor::System::Messages::Command) {}
+class PingPong::Ping      :isa(Acktor::Message) {}
+class PingPong::Pong      :isa(Acktor::Message) {}
+class PingPong::NewGame   :isa(Acktor::Message) {}
+class PingPong::EndGame   :isa(Acktor::Message) {}
+class PingPong::GameOver  :isa(Acktor::Message) {}
 
 =pod
 

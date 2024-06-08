@@ -7,7 +7,6 @@ use builtin      qw[ blessed refaddr true false ];
 use Acktor::System::Mailbox;
 
 use Acktor::System::Signals;
-use Acktor::System::Messages;
 
 use Acktor::System::Timers;
 use Acktor::System::IO;

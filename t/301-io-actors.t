@@ -15,15 +15,18 @@ use Acktor::System::IO::Selector::Stream;
 use Acktor::System::IO::Reader::LineBuffered;
 use Acktor::System::IO::Writer::LineBuffered;
 
-class ReadLines :isa(Acktor::System::Messages::Message) {}
+class ReadLines :isa(Acktor::Message) {}
 
-class LinesRead :isa(Acktor::System::Messages::Message) {
+class LinesRead :isa(Acktor::Message) {
     field $lines :param;
     method lines { @$lines }
 }
 
-class GotEOF   :isa(Acktor::System::Messages::Message) {}
-class GotError :isa(Acktor::System::Messages::Error) {}
+class GotEOF   :isa(Acktor::Message) {}
+class GotError :isa(Acktor::Message) {
+    field $error :param;
+    method error { $error }
+}
 
 class IO::Stream::Reader :isa(Acktor) {
     use Acktor::Logging;

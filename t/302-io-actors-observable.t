@@ -102,9 +102,9 @@ class BufferedFileReader :isa(Acktor) {
         }));
     }
 
-    my method dump_buffer ($context) {
+    my sub dump_buffer ($context, $lines) {
         my $num = 0;
-        $context->logger->log(INFO, join "\n" => map { sprintf '%3d : %s', ++$num, $_ } @lines) if INFO;
+        $context->logger->log(INFO, join "\n" => map { sprintf '%3d : %s', ++$num, $_ } @$lines) if INFO;
     }
 
     method got_line :Receive(Acktor::Streams::OnNext) ($context, $message) {
@@ -115,14 +115,14 @@ class BufferedFileReader :isa(Acktor) {
 
     method got_eof :Receive(Acktor::Streams::OnCompleted) ($context, $message) {
         $context->logger->log(INFO, "Got OnCompleted ... dumping buffer") if INFO;
-        $self->dump_buffer( $context );
+        dump_buffer( $context, \@lines );
         $BUFFERS{$fh} = \@lines;
         $context->stop;
     }
 
     method got_error :Receive(Acktor::Streams::OnError) ($context, $message) {
         $context->logger->log(INFO, "Got OnError ... dumping buffer") if INFO;
-        $self->dump_buffer( $context );
+        dump_buffer( $context, \@lines );
         $context->stop;
     }
 }

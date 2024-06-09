@@ -2,6 +2,16 @@
 # TODO
 <!---------------------------------------------------------------------------->
 
+## Actors & Behaviors
+
+- The Actor needs to own the Behavior, so that it can have `become` functionality
+    - borrow from the old Acktor implementation
+        - Mailbox called Actor::accept instead of Behavior::accept
+    - the current model is kind of inverted, so ...
+        - Make Mailbox call Actor::apply or Actor::signal
+            - which will internally call Behavior::receive_{message,signal}
+                - instead of the other way around
+
 ## IO
 
 - build actors for this

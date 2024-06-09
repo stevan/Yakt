@@ -6,6 +6,7 @@ use builtin      qw[ blessed refaddr true false ];
 
 class Acktor::Logging::Logger {
     use Term::ReadKey qw[ GetTerminalSize ];
+    use Time::HiRes   qw[ time ];
 
     our $TERM_WIDTH = (GetTerminalSize())[0];
 
@@ -48,7 +49,7 @@ class Acktor::Logging::Logger {
         $self->write($self->format_message($target, $level, @msg));
     }
 
-    method header ($label, $more_label=undef) {
+    method header ($label, $more_label=time()) {
         my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
         $width -= ((length $more_label) + 1) if $more_label;
         $fh->print(
@@ -59,7 +60,7 @@ class Acktor::Logging::Logger {
         );
     }
 
-    method line ($label, $more_label=undef) {
+    method line ($label, $more_label=time()) {
         my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
         $width -= ((length $more_label) + 1) if $more_label;
         $fh->print(
@@ -70,7 +71,7 @@ class Acktor::Logging::Logger {
         );
     }
 
-    method alert ($label, $more_label=undef) {
+    method alert ($label, $more_label=time()) {
         my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
         $width -= ((length $more_label) + 1) if $more_label;
         $fh->print(
@@ -82,7 +83,7 @@ class Acktor::Logging::Logger {
         );
     }
 
-    method notification ($label, $more_label=undef) {
+    method notification ($label, $more_label=time()) {
         my $width = ($TERM_WIDTH - ((length $label) + 2 + 2));
         $width -= ((length $more_label) + 1) if $more_label;
         $fh->print(

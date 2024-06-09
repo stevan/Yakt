@@ -145,9 +145,7 @@ class Acktor::System {
     }
 
     method tick {
-        state $TICK = 0;
-        my $t = sprintf '(%08d)' => $TICK;
-        $logger->header('begin:tick', $t) if DEBUG;
+        $logger->header('begin:tick') if DEBUG;
 
         # timers
         $timers->tick;
@@ -156,8 +154,7 @@ class Acktor::System {
         # watchers
         $io->tick( $timers->should_wait );
 
-        $logger->header('end:tick', $t) if DEBUG;
-        $TICK++;
+        $logger->header('end:tick') if DEBUG;
     }
 
     method loop_until_done {
@@ -166,30 +163,10 @@ class Acktor::System {
         $logger->log(DEBUG, 'Creating root actor ... ') if DEBUG;
         $root = $self->spawn_actor( $root_props );
 
-        my $start = time();
-        my $ticks = 0;
-        my $total = 0;
-
         while (1) {
-            $ticks++;
 
             # tick ...
-            my $start_tick = time();
             $self->tick;
-            my $end_tick = time() - $start_tick;
-            $total += $end_tick;
-            my $elapsed = time() - $start;
-
-            $logger->bubble(
-                'System Stats',
-                [
-                    (sprintf '%12s : %.09f' => 'current tick', $end_tick),
-                    (sprintf '%12s : %.09f' => 'average tick', $total / $ticks),
-                    (sprintf '%12s : %.09f' => 'total user',   $total),
-                    (sprintf '%12s : %.09f' => 'total system', $elapsed - $total),
-                    (sprintf '%12s : %.09f' => 'elapsed',      $elapsed),
-                ]
-            ) if DEBUG;
 
             $logger->bubble(
                 'Actor Tree',

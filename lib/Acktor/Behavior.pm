@@ -1,8 +1,7 @@
 #!perl
 
-use v5.38;
-use experimental qw[ class builtin try ];
-use builtin      qw[ blessed refaddr true false ];
+use v5.40;
+use experimental qw[ class ];
 
 class Acktor::Behavior {
     use Acktor::Logging;
@@ -17,23 +16,17 @@ class Acktor::Behavior {
     }
 
     method receive_message ($actor, $context, $message) {
-        $logger->log(INTERNALS, sprintf "Received ! Message($message) for ".$context->self ) if INTERNALS;
-        if (my $method = $receivers->{ blessed $message }) {
-            $actor->$method( $context, $message );
-            return true;
-        }
-        else {
-            return $actor->apply($context, $message);
-        }
+        $logger->log(INTERNALS, "Received ! Message($message) for ".$context->self ) if INTERNALS;
+        my $method = $receivers->{ blessed $message } // return false;
+        $actor->$method( $context, $message );
+        return true;
     }
 
     method receive_signal  ($actor, $context, $signal)  {
-        $logger->log(INTERNALS, sprintf "Received ! Signal($signal) for ".$context->self ) if INTERNALS;
-        if (my $method = $handlers->{ blessed $signal }) {
-            $actor->$method( $context, $signal );
-        } else {
-            $actor->signal($context, $signal);
-        }
+        $logger->log(INTERNALS, "Received ! Signal($signal) for ".$context->self ) if INTERNALS;
+        my $method = $handlers->{ blessed $signal } // return false;
+        $actor->$method( $context, $signal );
+        return true;
     }
 }
 

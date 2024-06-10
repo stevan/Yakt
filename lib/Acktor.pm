@@ -1,26 +1,55 @@
 #!perl
 
-use v5.38;
-use experimental qw[ class builtin try ];
-use builtin      qw[ blessed refaddr true false ];
+use v5.40;
+use experimental qw[ class ];
+
+use Acktor::Behavior;
 
 class Acktor {
     use Acktor::Logging;
 
-    method apply ($context, $message) {
-        $context->logger->log( WARN, "Unhandled message! $message" ) if WARN;
-        return false;
+    sub behavior_for;
+
+    field $behavior;
+    field @behaviors;
+
+    field $logger;
+
+    ADJUST {
+        $logger   = Acktor::Logging->logger(__PACKAGE__) if LOG_LEVEL;
+        $behavior = behavior_for( blessed $self );
     }
 
-    method signal ($context, $message) {}
+    # ...
+
+    method become ($b) { unshift @behaviors => $b }
+    method unbecome    { shift @behaviors         }
+
+
+    method receive ($context, $message) {
+        $logger->log( INTERNALS, "Actor got message($message) for $context" ) if INTERNALS;
+        return ($behaviors[0] // $behavior)->receive_message( $self, $context, $message );
+    }
+
+    method signal ($context, $signal) {
+        $logger->log( INTERNALS, "Actor got signal($signal) for $context" ) if INTERNALS;
+        return ($behaviors[0] // $behavior)->receive_signal( $self, $context, $signal );
+    }
 
     ## ...
 
-    my %ATTRIBUTES;
-    my %RECEIVERS;
-    my %HANDLERS;
-    sub FETCH_RECEIVERS ($pkg) { $RECEIVERS{ $pkg } }
-    sub FETCH_HANDLERS  ($pkg) {  $HANDLERS{ $pkg } }
+    my (%BEHAVIORS,
+        %RECEIVERS,
+        %HANDLERS,
+        %ATTRIBUTES);
+
+    sub behavior_for ($pkg) {
+        $BEHAVIORS{$pkg} //= Acktor::Behavior->new(
+            receivers => $RECEIVERS{$pkg},
+            handlers  => $HANDLERS{$pkg},
+        );
+    }
+
     sub FETCH_CODE_ATTRIBUTES  ($pkg, $code) { $ATTRIBUTES{ $pkg }{ $code } }
     sub MODIFY_CODE_ATTRIBUTES ($pkg, $code, @attrs) {
         grep { $_ !~ /^(Receive|Signal)/ }

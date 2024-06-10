@@ -1,8 +1,7 @@
 #!perl
 
-use v5.38;
-use experimental qw[ class builtin try ];
-use builtin      qw[ blessed refaddr true false ];
+use v5.40;
+use experimental qw[ class ];
 
 use Test::More;
 
@@ -47,11 +46,13 @@ class Joe :isa(Acktor) {
         $context->self->send(Goodbye->new);
     }
 
-    method apply ($context, $message) {
-        $UNHANDLED++;
-        $context->logger->log(INFO, "Unknown Message { Actor($self), $context, message($message) }" ) if INFO;
-        $context->stop;
-        return false;
+    method receive ($context, $message) {
+        unless ($self->SUPER::receive( $context, $message )) {
+            $UNHANDLED++;
+            $context->logger->log(INFO, "Unknown Message { Actor($self), $context, message($message) }" ) if INFO;
+            $context->stop;
+            return false;
+        }
     }
 }
 

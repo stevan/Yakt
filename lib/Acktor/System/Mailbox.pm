@@ -1,8 +1,7 @@
 #!perl
 
-use v5.38;
-use experimental qw[ class builtin try ];
-use builtin      qw[ blessed refaddr true false ];
+use v5.40;
+use experimental qw[ class ];
 
 use Acktor::Props;
 use Acktor::Ref;
@@ -43,7 +42,6 @@ class Acktor::System::Mailbox {
     field $ref;
 
     field $supervisor;
-    field $behavior;
     field $actor;
 
     field @children;
@@ -60,8 +58,7 @@ class Acktor::System::Mailbox {
         $ref     = Acktor::Ref->new( pid => ++$PID_SEQ );
         $context = Acktor::Context->new( ref => $ref, mailbox => $self, system => $system );
 
-        $supervisor = $props->new_supervisor;
-        $behavior   = $props->new_behavior;
+        $supervisor = $props->supervisor;
 
         $logger = Acktor::Logging->logger($self->to_string) if LOG_LEVEL;
 
@@ -125,7 +122,7 @@ class Acktor::System::Mailbox {
             }
 
             try {
-                $behavior->receive_signal($actor, $context, $sig);
+                $actor->signal($context, $sig);
             } catch ($e) {
                 chomp $e;
                 # XXX - what to do here???
@@ -213,10 +210,8 @@ class Acktor::System::Mailbox {
         while (@msgs) {
             my $msg = shift @msgs;
             try {
-                $behavior->receive_message($actor, $context, $msg)
-                    or do {
-                        push @unhandled => $msg;
-                    };
+                $actor->receive($context, $msg)
+                    or push @unhandled => $msg;
             } catch ($e) {
                 chomp $e;
 

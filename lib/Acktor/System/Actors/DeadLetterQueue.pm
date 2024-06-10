@@ -1,8 +1,7 @@
 #!perl
 
-use v5.38;
-use experimental qw[ class builtin try ];
-use builtin      qw[ blessed refaddr true false ];
+use v5.40;
+use experimental qw[ class ];
 
 use Acktor;
 use Acktor::System::Signals;
@@ -24,7 +23,7 @@ class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
 
     method dead_letters { @dead_letters }
 
-    method apply ($context, $message) {
+    method receive ($context, $message) {
         $context->logger->log(WARN, "Got Dead Letter ($message)" ) if WARN;
         push @dead_letters => $message;
         return true;

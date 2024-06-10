@@ -3,6 +3,7 @@
 use v5.40;
 use experimental qw[ class ];
 
+use Acktor::Actor;
 use Acktor::Props;
 use Acktor::Ref;
 use Acktor::Context;

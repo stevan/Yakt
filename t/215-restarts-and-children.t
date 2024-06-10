@@ -9,7 +9,7 @@ use ok 'Acktor::System';
 
 class Bar {}
 
-class Foo :isa(Acktor) {
+class Foo :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field $depth :param = 1;

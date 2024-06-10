@@ -3,10 +3,9 @@
 use v5.40;
 use experimental qw[ class ];
 
-use Acktor;
 use Acktor::System::Signals;
 
-class Acktor::System::Actors::Users :isa(Acktor) {
+class Acktor::System::Actors::Users :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     method signal ($context, $signal) {

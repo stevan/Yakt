@@ -9,7 +9,7 @@ use ok 'Acktor::System';
 
 use Acktor::Streams;
 
-class Observerable :isa(Acktor) {
+class Observerable :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     method subscribe :Receive(Acktor::Streams::Subscribe) ($context, $message) {
@@ -48,7 +48,7 @@ class Observerable :isa(Acktor) {
     }
 }
 
-class Observer :isa(Acktor) {
+class Observer :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     our @RESULTS;

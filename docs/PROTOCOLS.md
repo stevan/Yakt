@@ -70,7 +70,7 @@ class PingPongGame::Reset    :isa(Command) {}
 class PingPongGame::EndGame  :isa(Query)   {}
 class PingPongGame::GameOver :isa(Command) {}
 
-class PingPongGame :isa(Acktor) {
+class PingPongGame :isa(Acktor::Actor) {
     use Acktor::Logging;
     use Acktor::Protocol -implements => 'PingPong';
 

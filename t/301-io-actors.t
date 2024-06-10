@@ -26,7 +26,7 @@ class GotError {
     method error { $error }
 }
 
-class IO::Stream::Reader :isa(Acktor) {
+class IO::Stream::Reader :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field $fh       :param;
@@ -83,7 +83,7 @@ class IO::Stream::Reader :isa(Acktor) {
     }
 }
 
-class Reader :isa(Acktor) {
+class Reader :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field $fh :param;

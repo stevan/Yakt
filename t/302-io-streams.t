@@ -16,7 +16,7 @@ use Acktor::System::IO::Selector::Stream;
 use Acktor::System::IO::Reader::LineBuffered;
 use Acktor::System::IO::Writer::LineBuffered;
 
-class Acktor::IO::Stream::ObservableReader :isa(Acktor) {
+class Acktor::IO::Stream::ObservableReader :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field $observer :param;
@@ -74,7 +74,7 @@ class Acktor::IO::Stream::ObservableReader :isa(Acktor) {
     }
 }
 
-class BufferedFileReader :isa(Acktor) {
+class BufferedFileReader :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field $fh :param;

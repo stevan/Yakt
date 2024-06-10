@@ -10,7 +10,7 @@ use ok 'Acktor::System';
 use IO::Socket::SSL;
 use HTTP::Request;
 
-class Google :isa(Acktor) {
+class Google :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     our $MESSAGED   = 0;

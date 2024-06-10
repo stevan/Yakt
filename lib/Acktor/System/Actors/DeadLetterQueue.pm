@@ -3,7 +3,6 @@
 use v5.40;
 use experimental qw[ class ];
 
-use Acktor;
 use Acktor::System::Signals;
 
 # TODO - move to a Acktor::Messages:: or something
@@ -16,7 +15,7 @@ class Acktor::System::Actors::DeadLetterQueue::DeadLetter {
     method to_string { sprintf '%s (%s)' => $to, $message }
 }
 
-class Acktor::System::Actors::DeadLetterQueue :isa(Acktor) {
+class Acktor::System::Actors::DeadLetterQueue :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field @dead_letters;

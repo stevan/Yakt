@@ -25,7 +25,7 @@ Acktor::Protocol->new(PingPong)
 
 =cut
 
-class PingPong :isa(Acktor) {
+class PingPong :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field $max_bounces :param = 0;

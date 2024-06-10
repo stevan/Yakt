@@ -5,7 +5,7 @@ use experimental qw[ class ];
 
 use Acktor::Behavior;
 
-class Acktor {
+class Acktor::Actor {
     use Acktor::Logging;
 
     sub behavior_for;

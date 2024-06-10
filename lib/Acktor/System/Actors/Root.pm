@@ -3,13 +3,12 @@
 use v5.40;
 use experimental qw[ class ];
 
-use Acktor;
 use Acktor::Props;
 use Acktor::System::Signals;
 use Acktor::System::Actors::System;
 use Acktor::System::Actors::Users;
 
-class Acktor::System::Actors::Root :isa(Acktor) {
+class Acktor::System::Actors::Root :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     field $init :param;

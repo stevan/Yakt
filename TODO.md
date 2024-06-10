@@ -2,25 +2,6 @@
 # TODO
 <!---------------------------------------------------------------------------->
 
-## Loggers
-
-Turn the current Logger into a Sync Logger, for use in class based stuff.
-
-Add a new Async Logger for all actors to use.
-
-The old Logger API will become a facade over the new Async Logger
-    - and this can be handled via the context->logger
-
-QUESTIONS:
-But does this make sense to introduce this extra layer?
-    - perhaps it can be useful for a Live Running Application
-        - but less so on the command line
-    - however, if the command line DEBUG flag is set
-        - it can just use the SyncLogger
-    - but this could be very powerful for a remote debugger
-
-Or is it good enough to just make the print calls to STDERR be async?
-
 ## IO
 
 - build actors for this
@@ -31,6 +12,11 @@ Or is it good enough to just make the print calls to STDERR be async?
 
 - add method for adding Selectors
     - go via System
+
+## Loggers
+
+- Make the Logger async using a watcher
+    - or a special purpose watcher perhaps
 
 ## Supervisors
 

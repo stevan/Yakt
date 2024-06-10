@@ -10,7 +10,7 @@ use ok 'Acktor::System';
 class Hello {}
 class Goodbye {}
 
-class Joe :isa(Acktor) {
+class Joe :isa(Acktor::Actor) {
     use Acktor::Logging;
 
     our $MESSAGED   = 0;

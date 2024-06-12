@@ -1,5 +1,13 @@
 
-# Presenting Acktor - Distributed Actor System for Perl
+# Presenting Yakt - Distributed Actor System for Perl
+
+## Definition: Yak Shaving
+
+- describes a series of small tasks necessary in order to accomplish a larger goal
+    - This is what Actors are all about
+        - breaking things into small tasks to be run asyncronously
+- describes a less useful activity done consciously or subconsciously to procrastinate about a larger but more useful task
+    - This describes the project itself, it was my distraction project
 
 ## Actors
 

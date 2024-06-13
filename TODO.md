@@ -47,20 +47,6 @@
 # Maybe
 <!---------------------------------------------------------------------------->
 
-## Address
-
-- Re-add these ???
-
-- don't do `0002@localhost:3000/foo/bar`
-    - do `localhost:3000/foo/bar/2`
-    - it is more REST appropriate and conveys the relationships better
-        - i.e. - instance PID(2) of the `/foo/bar` actor
-
-## Messages
-
-- make all messages be able to stringify and desctructure-able
-    - but do I really want to enforce a base class?
-
 ## Perl Stuff
 
 `use warnings FATAL => qw[ once ]`

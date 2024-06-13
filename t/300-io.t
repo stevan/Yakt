@@ -5,13 +5,13 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
 use IO::Socket::SSL;
 use HTTP::Request;
 
-class Google :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class Google :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     our $MESSAGED   = 0;
     our $STARTED    = 0;
@@ -25,7 +25,7 @@ class Google :isa(Acktor::Actor) {
     field $timeout;
 
     method signal ($context, $signal) {
-        if ($signal isa Acktor::System::Signals::Started) {
+        if ($signal isa Yakt::System::Signals::Started) {
             $STARTED++;
             $context->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
 
@@ -40,7 +40,7 @@ class Google :isa(Acktor::Actor) {
 
             $context->logger->log(INFO, sprintf 'Connected to %s' => $google ) if INFO;
 
-            $watcher = Acktor::System::IO::Selector::Socket->new( ref => $context->self, fh => $google );
+            $watcher = Yakt::System::IO::Selector::Socket->new( ref => $context->self, fh => $google );
             $watcher->is_connecting = true;
 
             $context->system->io->add_selector( $watcher );
@@ -50,7 +50,7 @@ class Google :isa(Acktor::Actor) {
                 $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::System::Signals::IO::IsConnected) {
+        } elsif ($signal isa Yakt::System::Signals::IO::IsConnected) {
             $CONNECTED++;
             $context->logger->log(INFO, sprintf 'IsConnected %s' => $context->self ) if INFO;
             $timeout->cancel;
@@ -63,17 +63,17 @@ class Google :isa(Acktor::Actor) {
                 $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::System::Signals::IO::GotConnectionError) {
+        } elsif ($signal isa Yakt::System::Signals::IO::GotConnectionError) {
             $context->logger->log(INFO, sprintf 'GotConnectionError %s' => $context->self ) if INFO;
             $timeout->cancel;
             $watcher->reset;
 
-        } elsif ($signal isa Acktor::System::Signals::IO::GotError) {
+        } elsif ($signal isa Yakt::System::Signals::IO::GotError) {
             $context->logger->log(INFO, sprintf 'GotError %s' => $context->self ) if INFO;
             $timeout->cancel;
             $watcher->reset;
 
-        } elsif ($signal isa Acktor::System::Signals::IO::CanWrite) {
+        } elsif ($signal isa Yakt::System::Signals::IO::CanWrite) {
             $context->logger->log(INFO, sprintf 'CanWrite %s' => $context->self ) if INFO;
             $timeout->cancel;
 
@@ -87,7 +87,7 @@ class Google :isa(Acktor::Actor) {
                 $watcher->reset;
             });
 
-        } elsif ($signal isa Acktor::System::Signals::IO::CanRead) {
+        } elsif ($signal isa Yakt::System::Signals::IO::CanRead) {
             $context->logger->log(INFO, sprintf 'CanRead %s' => $context->self ) if INFO;
 
             my $socket = $watcher->fh;
@@ -113,13 +113,13 @@ class Google :isa(Acktor::Actor) {
 
             $context->stop;
 
-        } elsif ($signal isa Acktor::System::Signals::Stopping) {
+        } elsif ($signal isa Yakt::System::Signals::Stopping) {
             $STOPPING++;
             $context->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::System::Signals::Restarting) {
+        } elsif ($signal isa Yakt::System::Signals::Restarting) {
             $RESTARTED++;
             $context->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
-        } elsif ($signal isa Acktor::System::Signals::Stopped) {
+        } elsif ($signal isa Yakt::System::Signals::Stopped) {
             $STOPPED++;
             $context->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
         }
@@ -135,10 +135,10 @@ class Google :isa(Acktor::Actor) {
     }
 }
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    my $g1 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
-    my $g2 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
-    my $g3 = $context->spawn( Acktor::Props->new( class => 'Google' ) );
+my $sys = Yakt::System->new->init(sub ($context) {
+    my $g1 = $context->spawn( Yakt::Props->new( class => 'Google' ) );
+    my $g2 = $context->spawn( Yakt::Props->new( class => 'Google' ) );
+    my $g3 = $context->spawn( Yakt::Props->new( class => 'Google' ) );
 });
 
 $sys->loop_until_done;

@@ -5,78 +5,78 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
-use Acktor::Streams;
+use Yakt::Streams;
 
-class Observerable :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class Observerable :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
-    method subscribe :Receive(Acktor::Streams::Subscribe) ($context, $message) {
+    method subscribe :Receive(Yakt::Streams::Subscribe) ($context, $message) {
         my $subscriber = $message->subscriber;
 
         foreach my $i ( 0, 1 ) {
-            $subscriber->send( Acktor::Streams::OnNext->new( value => $i ) );
+            $subscriber->send( Yakt::Streams::OnNext->new( value => $i ) );
         }
 
         $context->schedule( after => 0.2, callback => sub {
             foreach my $i ( 2, 3 ) {
-                $subscriber->send( Acktor::Streams::OnNext->new( value => $i ) );
+                $subscriber->send( Yakt::Streams::OnNext->new( value => $i ) );
             }
 
             $context->schedule( after => 0.1, callback => sub {
                 foreach my $i ( 4, 5 ) {
-                    $subscriber->send( Acktor::Streams::OnNext->new( value => $i ) );
+                    $subscriber->send( Yakt::Streams::OnNext->new( value => $i ) );
                 }
             });
         });
 
         $context->schedule( after => 0.4, callback => sub {
             foreach my $i ( 6 .. 9 ) {
-                $subscriber->send( Acktor::Streams::OnNext->new( value => $i ) );
+                $subscriber->send( Yakt::Streams::OnNext->new( value => $i ) );
             }
 
             $context->schedule( after => 0.2, callback => sub {
-                $subscriber->send( Acktor::Streams::OnNext->new( value => 10 ) );
+                $subscriber->send( Yakt::Streams::OnNext->new( value => 10 ) );
             });
         });
 
         $context->schedule( after => 0.8, callback => sub {
-            $subscriber->send( Acktor::Streams::OnCompleted->new );
+            $subscriber->send( Yakt::Streams::OnCompleted->new );
             $context->stop;
         });
     }
 }
 
-class Observer :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class Observer :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     our @RESULTS;
     our $COMPLETED = 0;
     our $ERROR;
 
-    method on_next :Receive(Acktor::Streams::OnNext) ($context, $message) {
+    method on_next :Receive(Yakt::Streams::OnNext) ($context, $message) {
         $context->logger->log(INFO, "OnNext called" ) if INFO;
         push @RESULTS => $message->value;
     }
 
-    method on_completed :Receive(Acktor::Streams::OnCompleted) ($context, $message) {
+    method on_completed :Receive(Yakt::Streams::OnCompleted) ($context, $message) {
         $context->logger->log(INFO, "OnCompleted called" ) if INFO;
         $context->stop;
         $COMPLETED++;
     }
 
-    method on_error :Receive(Acktor::Streams::OnError) ($context, $message) {
+    method on_error :Receive(Yakt::Streams::OnError) ($context, $message) {
         $context->logger->log(INFO, "OnError called" ) if INFO;
         $ERROR = $message->error;
     }
 }
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    my $observerable = $context->spawn( Acktor::Props->new( class => 'Observerable' ) );
-    my $observer     = $context->spawn( Acktor::Props->new( class => 'Observer' ) );
+my $sys = Yakt::System->new->init(sub ($context) {
+    my $observerable = $context->spawn( Yakt::Props->new( class => 'Observerable' ) );
+    my $observer     = $context->spawn( Yakt::Props->new( class => 'Observer' ) );
 
-    $observerable->send( Acktor::Streams::Subscribe->new( subscriber => $observer ));
+    $observerable->send( Yakt::Streams::Subscribe->new( subscriber => $observer ));
 });
 
 $sys->loop_until_done;

@@ -5,19 +5,19 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
-use Acktor::Streams;
+use Yakt::Streams;
 
-use Acktor::System::Signals::IO;
+use Yakt::System::Signals::IO;
 
-use Acktor::System::IO::Selector::Stream;
+use Yakt::System::IO::Selector::Stream;
 
-use Acktor::System::IO::Reader::LineBuffered;
-use Acktor::System::IO::Writer::LineBuffered;
+use Yakt::System::IO::Reader::LineBuffered;
+use Yakt::System::IO::Writer::LineBuffered;
 
-class Acktor::IO::Stream::ObservableReader :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class Yakt::IO::Stream::ObservableReader :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     field $observer :param;
     field $fh       :param;
@@ -28,31 +28,31 @@ class Acktor::IO::Stream::ObservableReader :isa(Acktor::Actor) {
     field @line_buffer;
 
     ADJUST {
-        $read_buffer = Acktor::System::IO::Reader::LineBuffered->new( buffer_size => 128 );
+        $read_buffer = Yakt::System::IO::Reader::LineBuffered->new( buffer_size => 128 );
     }
 
     # ... Signals
 
-    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
+    method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
         $context->logger->log(INFO, "Started, creating watcher for fh($fh) ... ") if INFO;
-        $watcher = Acktor::System::IO::Selector::Stream->new( ref => $context->self, fh => $fh );
+        $watcher = Yakt::System::IO::Selector::Stream->new( ref => $context->self, fh => $fh );
         $context->system->io->add_selector( $watcher );
         $watcher->is_reading = true;
     }
 
-    method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
+    method on_stopping :Signal(Yakt::System::Signals::Stopping) ($context, $signal) {
         $context->logger->log(INFO, "Stopping, removing watcher for fh($fh) ... ") if INFO;
         $context->system->io->remove_selector( $watcher );
     }
 
     # ... IO Signals
 
-    method can_read :Signal(Acktor::System::Signals::IO::CanRead) ($context, $signal) {
+    method can_read :Signal(Yakt::System::Signals::IO::CanRead) ($context, $signal) {
         if ($read_buffer->read($fh)) {
             $context->logger->log(INFO, "Read bytes from fh($fh)") if INFO;
             if (my @lines = $read_buffer->flush_buffer) {
                 $context->logger->log(INFO, "Got ".(scalar @lines)." lines reading fh($fh)") if INFO;
-                $observer->send(Acktor::Streams::OnNext->new( value => $_ ))
+                $observer->send(Yakt::Streams::OnNext->new( value => $_ ))
                     foreach @lines;
             }
             else {
@@ -62,20 +62,20 @@ class Acktor::IO::Stream::ObservableReader :isa(Acktor::Actor) {
 
         if (my $e = $read_buffer->got_error) {
             $context->logger->log(ERROR, "Got error($e) reading fh($fh)") if ERROR;
-            $observer->send(Acktor::Streams::OnError->new( error => $e ));
+            $observer->send(Yakt::Streams::OnError->new( error => $e ));
             $watcher->is_reading = false;
         }
 
         if ($read_buffer->got_eof) {
             $context->logger->log(INFO, "Got EOF reading fh($fh)") if INFO;
-            $observer->send(Acktor::Streams::OnCompleted->new);
+            $observer->send(Yakt::Streams::OnCompleted->new);
             $watcher->is_reading = false;
         }
     }
 }
 
-class BufferedFileReader :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class BufferedFileReader :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     field $fh :param;
 
@@ -84,8 +84,8 @@ class BufferedFileReader :isa(Acktor::Actor) {
 
     our %BUFFERS;
 
-    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
-        $stream = $context->spawn(Acktor::Props->new( class => 'Acktor::IO::Stream::ObservableReader', args => {
+    method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
+        $stream = $context->spawn(Yakt::Props->new( class => 'Yakt::IO::Stream::ObservableReader', args => {
             observer => $context->self,
             fh       => $fh
         }));
@@ -96,20 +96,20 @@ class BufferedFileReader :isa(Acktor::Actor) {
         $context->logger->log(INFO, join "\n" => map { sprintf '%3d : %s', ++$num, $_ } @$lines) if INFO;
     }
 
-    method got_line :Receive(Acktor::Streams::OnNext) ($context, $message) {
+    method got_line :Receive(Yakt::Streams::OnNext) ($context, $message) {
         my $line = $message->value;
         $context->logger->log(INFO, "Got OnNext with line($line) ...") if INFO;
         push @lines => $line;
     }
 
-    method got_eof :Receive(Acktor::Streams::OnCompleted) ($context, $message) {
+    method got_eof :Receive(Yakt::Streams::OnCompleted) ($context, $message) {
         $context->logger->log(INFO, "Got OnCompleted ... dumping buffer") if INFO;
         dump_buffer( $context, \@lines );
         $BUFFERS{$fh} = \@lines;
         $context->stop;
     }
 
-    method got_error :Receive(Acktor::Streams::OnError) ($context, $message) {
+    method got_error :Receive(Yakt::Streams::OnError) ($context, $message) {
         $context->logger->log(INFO, "Got OnError ... dumping buffer") if INFO;
         dump_buffer( $context, \@lines );
         $context->stop;
@@ -124,9 +124,9 @@ my $fh2 = IO::File->new;
 
 $fh2->open('t/300-io.t', 'r');
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    my $o1 = $context->spawn(Acktor::Props->new( class => 'BufferedFileReader', args => { fh => $fh1 } ));
-    my $o2 = $context->spawn(Acktor::Props->new( class => 'BufferedFileReader', args => { fh => $fh2 } ));
+my $sys = Yakt::System->new->init(sub ($context) {
+    my $o1 = $context->spawn(Yakt::Props->new( class => 'BufferedFileReader', args => { fh => $fh1 } ));
+    my $o2 = $context->spawn(Yakt::Props->new( class => 'BufferedFileReader', args => { fh => $fh2 } ));
 });
 
 $sys->loop_until_done;

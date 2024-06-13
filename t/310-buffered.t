@@ -5,11 +5,11 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
-use Acktor::System::IO::Reader::LineBuffered;
+use Yakt::System::IO::Reader::LineBuffered;
 
-my $b = Acktor::System::IO::Reader::LineBuffered->new( buffer_size => 32 );
+my $b = Yakt::System::IO::Reader::LineBuffered->new( buffer_size => 32 );
 
 my $fh = IO::File->new;
 

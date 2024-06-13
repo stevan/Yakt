@@ -5,11 +5,11 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
 my $COUNT = 0;
 
-my $sys = Acktor::System->new->init(sub ($context) {
+my $sys = Yakt::System->new->init(sub ($context) {
     $COUNT++;
 });
 

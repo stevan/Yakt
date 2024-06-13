@@ -5,10 +5,10 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
-class RandomTree :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class RandomTree :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     use constant MAX_DEPTH => 10;
 
@@ -22,12 +22,12 @@ class RandomTree :isa(Acktor::Actor) {
 
     # $context->logger->bubble( 'Actor Tree', [ $context->system->print_actor_tree($context->self) ] ) if INFO;
 
-    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
+    method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
         $STARTED++;
         $context->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
 
         if ($depth < MAX_DEPTH) {
-            $context->spawn(Acktor::Props->new(
+            $context->spawn(Yakt::Props->new(
                 class => 'RandomTree',
                 args  => {
                     root  => $root // $context->self,
@@ -42,7 +42,7 @@ class RandomTree :isa(Acktor::Actor) {
         }
     }
 
-    method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
+    method on_stopping :Signal(Yakt::System::Signals::Stopping) ($context, $signal) {
         $STOPPING++;
         if ( !$root ) {
             $context->logger->log( WARN, 'Got Stop Signal for '.$context ) if WARN;
@@ -50,14 +50,14 @@ class RandomTree :isa(Acktor::Actor) {
         #$context->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
     }
 
-    method on_stopped :Signal(Acktor::System::Signals::Stopped) ($context, $signal) {
+    method on_stopped :Signal(Yakt::System::Signals::Stopped) ($context, $signal) {
         $STOPPED++;
         #$context->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
     }
 }
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    my $t = $context->spawn( Acktor::Props->new( class => 'RandomTree' ) );
+my $sys = Yakt::System->new->init(sub ($context) {
+    my $t = $context->spawn( Yakt::Props->new( class => 'RandomTree' ) );
 });
 
 $sys->loop_until_done;

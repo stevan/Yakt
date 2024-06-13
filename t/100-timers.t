@@ -5,12 +5,12 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
 my $COUNT = 0;
 my @RESULTS;
 
-my $sys = Acktor::System->new->init(sub ($context) {
+my $sys = Yakt::System->new->init(sub ($context) {
 
     $context->schedule( after => 0.1, callback => sub {
         push @RESULTS => [ 1, $COUNT++ ];

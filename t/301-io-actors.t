@@ -5,14 +5,14 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
-use Acktor::System::Signals::IO;
+use Yakt::System::Signals::IO;
 
-use Acktor::System::IO::Selector::Stream;
+use Yakt::System::IO::Selector::Stream;
 
-use Acktor::System::IO::Reader::LineBuffered;
-use Acktor::System::IO::Writer::LineBuffered;
+use Yakt::System::IO::Reader::LineBuffered;
+use Yakt::System::IO::Writer::LineBuffered;
 
 class ReadLines {}
 class LinesRead {
@@ -26,8 +26,8 @@ class GotError {
     method error { $error }
 }
 
-class IO::Stream::Reader :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class IO::Stream::Reader :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     field $fh       :param;
     field $observer :param;
@@ -38,25 +38,25 @@ class IO::Stream::Reader :isa(Acktor::Actor) {
     field @line_buffer;
 
     ADJUST {
-        $read_buffer = Acktor::System::IO::Reader::LineBuffered->new( buffer_size => 128 );
+        $read_buffer = Yakt::System::IO::Reader::LineBuffered->new( buffer_size => 128 );
     }
 
     # ... Signals
 
-    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
+    method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
         $context->logger->log(INFO, "Started, creating watcher for fh($fh) ... ") if INFO;
-        $watcher = Acktor::System::IO::Selector::Stream->new( ref => $context->self, fh => $fh );
+        $watcher = Yakt::System::IO::Selector::Stream->new( ref => $context->self, fh => $fh );
         $context->system->io->add_selector( $watcher );
     }
 
-    method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
+    method on_stopping :Signal(Yakt::System::Signals::Stopping) ($context, $signal) {
         $context->logger->log(INFO, "Stopping, removing watcher for fh($fh) ... ") if INFO;
         $context->system->io->remove_selector( $watcher );
     }
 
     # ... IO Signals
 
-    method can_read :Signal(Acktor::System::Signals::IO::CanRead) ($context, $signal) {
+    method can_read :Signal(Yakt::System::Signals::IO::CanRead) ($context, $signal) {
         if ($read_buffer->read($fh)) {
             my @lines = $read_buffer->flush_buffer;
             $observer->send(LinesRead->new( lines => \@lines ));
@@ -83,8 +83,8 @@ class IO::Stream::Reader :isa(Acktor::Actor) {
     }
 }
 
-class Reader :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class Reader :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     field $fh :param;
 
@@ -93,8 +93,8 @@ class Reader :isa(Acktor::Actor) {
 
     our %BUFFERS;
 
-    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
-        $stream = $context->spawn(Acktor::Props->new( class => 'IO::Stream::Reader', args => {
+    method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
+        $stream = $context->spawn(Yakt::Props->new( class => 'IO::Stream::Reader', args => {
             observer => $context->self,
             fh       => $fh
         }));
@@ -136,9 +136,9 @@ my $fh2 = IO::File->new;
 
 $fh2->open('t/300-io.t', 'r');
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    my $o1 = $context->spawn(Acktor::Props->new( class => 'Reader', args => { fh => $fh1 } ));
-    my $o2 = $context->spawn(Acktor::Props->new( class => 'Reader', args => { fh => $fh2 } ));
+my $sys = Yakt::System->new->init(sub ($context) {
+    my $o1 = $context->spawn(Yakt::Props->new( class => 'Reader', args => { fh => $fh1 } ));
+    my $o2 = $context->spawn(Yakt::Props->new( class => 'Reader', args => { fh => $fh2 } ));
 });
 
 $sys->loop_until_done;

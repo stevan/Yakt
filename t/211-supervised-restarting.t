@@ -5,7 +5,7 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
 class Hello {
     field $count = 0;
@@ -16,8 +16,8 @@ class Hello {
     method total { $count }
 }
 
-class Joe :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class Joe :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     our $MESSAGED    = 0;
     our $STARTED     = 0;
@@ -26,22 +26,22 @@ class Joe :isa(Acktor::Actor) {
     our $STOPPED     = 0;
     our $TOTAL_HELLO = 0;
 
-    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
+    method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
         $STARTED++;
         $context->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
     }
 
-    method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
+    method on_stopping :Signal(Yakt::System::Signals::Stopping) ($context, $signal) {
         $STOPPING++;
         $context->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
     }
 
-    method on_restarting :Signal(Acktor::System::Signals::Restarting) ($context, $signal) {
+    method on_restarting :Signal(Yakt::System::Signals::Restarting) ($context, $signal) {
         $RESTARTED++;
         $context->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
     }
 
-    method on_stopped :Signal(Acktor::System::Signals::Stopped) ($context, $signal) {
+    method on_stopped :Signal(Yakt::System::Signals::Stopped) ($context, $signal) {
         $STOPPED++;
         $context->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
     }
@@ -63,10 +63,10 @@ class Joe :isa(Acktor::Actor) {
     }
 }
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    my $joe = $context->spawn(Acktor::Props->new(
+my $sys = Yakt::System->new->init(sub ($context) {
+    my $joe = $context->spawn(Yakt::Props->new(
         class      => 'Joe',
-        supervisor => Acktor::System::Supervisors::Restart->new
+        supervisor => Yakt::System::Supervisors::Restart->new
     ));
     $joe->send(Hello->new);
 });

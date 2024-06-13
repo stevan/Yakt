@@ -5,12 +5,12 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
 class Bar {}
 
-class Foo :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class Foo :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     field $depth :param = 1;
     field $max   :param = 4;
@@ -29,11 +29,11 @@ class Foo :isa(Acktor::Actor) {
         die "Going to Restart!"
     }
 
-    method on_start :Signal(Acktor::System::Signals::Started) ($context, $signal) {
+    method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
         $STARTED++;
         $context->logger->log(INFO, sprintf 'Started %s' => $context->self ) if INFO;
         if ( $depth <= $max ) {
-            $context->spawn(Acktor::Props->new(
+            $context->spawn(Yakt::Props->new(
                 class => 'Foo',
                 args => {
                     depth => $depth + 1,
@@ -60,27 +60,27 @@ class Foo :isa(Acktor::Actor) {
         }
     }
 
-    method on_stopping :Signal(Acktor::System::Signals::Stopping) ($context, $signal) {
+    method on_stopping :Signal(Yakt::System::Signals::Stopping) ($context, $signal) {
         $STOPPING++;
         $context->logger->log( INFO, sprintf 'Stopping %s' => $context->self ) if INFO
     }
 
-    method on_restarting :Signal(Acktor::System::Signals::Restarting) ($context, $signal) {
+    method on_restarting :Signal(Yakt::System::Signals::Restarting) ($context, $signal) {
         $RESTARTED++;
         $context->logger->log( INFO, sprintf 'Restarting %s' => $context->self ) if INFO
     }
 
-    method on_stopped :Signal(Acktor::System::Signals::Stopped) ($context, $signal) {
+    method on_stopped :Signal(Yakt::System::Signals::Stopped) ($context, $signal) {
         $STOPPED++;
         $context->logger->log( INFO, sprintf 'Stopped %s' => $context->self ) if INFO
     }
 
 }
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    $context->spawn(Acktor::Props->new(
+my $sys = Yakt::System->new->init(sub ($context) {
+    $context->spawn(Yakt::Props->new(
         class      => 'Foo',
-        supervisor => Acktor::System::Supervisors::Restart->new
+        supervisor => Yakt::System::Supervisors::Restart->new
     ));
 });
 

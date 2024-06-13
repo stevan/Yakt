@@ -5,17 +5,17 @@ use experimental qw[ class ];
 
 use Test::More;
 
-use ok 'Acktor::System';
+use ok 'Yakt::System';
 
-class PingPong::Ping      :isa(Acktor::Message) {}
-class PingPong::Pong      :isa(Acktor::Message) {}
-class PingPong::NewGame   :isa(Acktor::Message) {}
-class PingPong::EndGame   :isa(Acktor::Message) {}
-class PingPong::GameOver  :isa(Acktor::Message) {}
+class PingPong::Ping      :isa(Yakt::Message) {}
+class PingPong::Pong      :isa(Yakt::Message) {}
+class PingPong::NewGame   :isa(Yakt::Message) {}
+class PingPong::EndGame   :isa(Yakt::Message) {}
+class PingPong::GameOver  :isa(Yakt::Message) {}
 
 =pod
 
-Acktor::Protocol->new(PingPong)
+Yakt::Protocol->new(PingPong)
     ->accepts(Ping)
     ->accepts(Pong)
     ->accepts(StartGame)
@@ -25,8 +25,8 @@ Acktor::Protocol->new(PingPong)
 
 =cut
 
-class PingPong :isa(Acktor::Actor) {
-    use Acktor::Logging;
+class PingPong :isa(Yakt::Actor) {
+    use Yakt::Logging;
 
     field $max_bounces :param = 0;
 
@@ -87,9 +87,9 @@ class PingPong :isa(Acktor::Actor) {
 
 }
 
-my $sys = Acktor::System->new->init(sub ($context) {
-    my $player1 = $context->spawn(Acktor::Props->new( class => 'PingPong', args => { max_bounces => 5 } ));
-    my $player2 = $context->spawn(Acktor::Props->new( class => 'PingPong' ));
+my $sys = Yakt::System->new->init(sub ($context) {
+    my $player1 = $context->spawn(Yakt::Props->new( class => 'PingPong', args => { max_bounces => 5 } ));
+    my $player2 = $context->spawn(Yakt::Props->new( class => 'PingPong' ));
 
     $player1->send(PingPong::NewGame->new( reply_to => $player2 ));
 

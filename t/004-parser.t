@@ -25,7 +25,11 @@ class Parse::Result :isa(Yakt::Message) {}
 
 class HTTP::Parser :isa(Yakt::Actor) {
     use Yakt::Logging;
-    use Yakt::Utils::FSM;
+
+    # TODO: move this elsewhere ...
+    sub Behavior :prototype($) ($receivers) {
+        Yakt::Behavior->new( receivers => $receivers )
+    }
 
     field $ref;
     field $source;

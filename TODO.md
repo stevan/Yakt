@@ -2,7 +2,30 @@
 # TODO
 <!---------------------------------------------------------------------------->
 
+- make become/unbcome just do one thing
+    - add become_stacked/unbecome_stacked for that if desired
+    - how do they work together?
+
+- find a place for the `Behaviors {}` helper
+    - should I accept a CODE ref as well?
+    - do they have any kind of lifecycle?
+    - do they accept signals?
+
+## Streams - non-reactive
+
+- Add some actors for this:
+    - Observers:
+        - Observer : which takes callbacks for events
+        - ObserverSink : which takes a Sink object, and collects everything into it
+    - Observables:
+        - Observable : takes a source to publish
+    - Processors:
+        - Map, Grep, etc.
+
 ## IO
+
+- create a protocol for reading/writing
+    - it should be based an Observables
 
 - build actors for this
     - Stream

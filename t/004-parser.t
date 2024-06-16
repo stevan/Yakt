@@ -8,7 +8,7 @@ use Test::More;
 use ok 'Yakt::System';
 use ok 'Yakt::Logging';
 
-class Parse::Message :isa(Yakt::Message) {
+class Parse::Message {
     field $ref    :param :reader;
     field $source :param :reader;
 }

@@ -1,6 +1,6 @@
 # Yakt - An Actor System for Perl 5
 
-```scala
+```cobol
    \         /
     \       /,,,.~~~.~.~~~~.__
    / )    .( \::               ::::::'``-.

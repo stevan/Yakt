@@ -13,11 +13,11 @@ class Yakt::Message {
     field $payload  :param :reader = undef;
 
     method to_string {
-        join '' => blessed $self, '(',
+        join '' => blessed $self, '(', join ', ' => (
             ($reply_to ? "reply_to: $reply_to" : ()),
-            ($sender   ? ", sender: $sender"   : ()),
-            ($payload  ? ", payload: $payload" : ()),
-        ')'
+            ($sender   ?   "sender: $sender"   : ()),
+            ($payload  ?  "payload: $payload"  : ()),
+        ),')';
     }
 }
 

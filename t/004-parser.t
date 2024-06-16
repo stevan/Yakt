@@ -26,11 +26,6 @@ class Parse::Result :isa(Yakt::Message) {}
 class HTTP::Parser :isa(Yakt::Actor) {
     use Yakt::Logging;
 
-    # TODO: move this elsewhere ...
-    sub Behavior :prototype($) ($receivers) {
-        Yakt::Behavior->new( receivers => $receivers )
-    }
-
     field $ref;
     field $source;
     field %result;
@@ -40,7 +35,7 @@ class HTTP::Parser :isa(Yakt::Actor) {
     field $parse_body;
 
     ADJUST {
-        $parse_status = Behavior {
+        $parse_status = Yakt::Behavior->new(receivers => {
             Parse::StatusLine:: => method ($context, $message) {
                 $context->logger->log(INFO, 'Got Parse::StatusLine') if INFO;
 
@@ -50,9 +45,9 @@ class HTTP::Parser :isa(Yakt::Actor) {
                 $self->become($parse_headers);
                 $context->self->send( Parse::Headers->new );
             }
-        };
+        });
 
-        $parse_headers = Behavior {
+        $parse_headers = Yakt::Behavior->new(receivers => {
             Parse::Headers:: => method ($context, $message) {
                 $context->logger->log(INFO, 'Got Parse::Headers') if INFO;
 
@@ -77,9 +72,9 @@ class HTTP::Parser :isa(Yakt::Actor) {
                     $context->self->send( Parse::Body->new );
                 }
             }
-        };
+        });
 
-        $parse_body = Behavior {
+        $parse_body = Yakt::Behavior->new(receivers => {
             Parse::Body:: => method ($context, $message) {
                 $result{status}{body} = 'FOO!!!!';
 
@@ -89,7 +84,7 @@ class HTTP::Parser :isa(Yakt::Actor) {
                 $self->unbecome;
                 $context->self->send( Parse::Completed->new );
             }
-        };
+        });
     }
 
     # Regular methods ...

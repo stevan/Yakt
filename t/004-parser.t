@@ -47,8 +47,6 @@ class HTTP::Parser :isa(Yakt::Actor) {
                 $result{status}{method} = 'GET';
                 $result{status}{url}    = '/index.html';
 
-                # FIXME: this is ugly, it should be one method call
-                $self->unbecome;
                 $self->become($parse_headers);
                 $context->self->send( Parse::Headers->new );
             }
@@ -72,12 +70,9 @@ class HTTP::Parser :isa(Yakt::Actor) {
                     # either parse the body, or finish
 
                 if ( $result{status}{method} eq 'GET' ) {
-                    # FIXME: should this become a `reset` or something?
                     $self->unbecome;
                     $context->self->send( Parse::Completed->new );
                 } else {
-                    # FIXME: this is ugly, it should be one method call
-                    $self->unbecome;
                     $self->become($parse_body);
                     $context->self->send( Parse::Body->new );
                 }

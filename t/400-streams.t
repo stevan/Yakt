@@ -7,7 +7,9 @@ use Test::More;
 
 use ok 'Yakt::System';
 
+use Yakt::Logging;
 use Yakt::Streams;
+use Yakt::Streams::Actors::Observer;
 
 class Observerable :isa(Yakt::Actor) {
     use Yakt::Logging;
@@ -48,42 +50,39 @@ class Observerable :isa(Yakt::Actor) {
     }
 }
 
-class Observer :isa(Yakt::Actor) {
-    use Yakt::Logging;
-
-    our @RESULTS;
-    our $COMPLETED = 0;
-    our $ERROR;
-
-    method on_next :Receive(Yakt::Streams::OnNext) ($context, $message) {
-        $context->logger->log(INFO, "OnNext called" ) if INFO;
-        push @RESULTS => $message->value;
-    }
-
-    method on_completed :Receive(Yakt::Streams::OnCompleted) ($context, $message) {
-        $context->logger->log(INFO, "OnCompleted called" ) if INFO;
-        $context->stop;
-        $COMPLETED++;
-    }
-
-    method on_error :Receive(Yakt::Streams::OnError) ($context, $message) {
-        $context->logger->log(INFO, "OnError called" ) if INFO;
-        $ERROR = $message->error;
-    }
-}
+our @RESULTS;
+our $COMPLETED = 0;
+our $ERROR;
 
 my $sys = Yakt::System->new->init(sub ($context) {
     my $observerable = $context->spawn( Yakt::Props->new( class => 'Observerable' ) );
-    my $observer     = $context->spawn( Yakt::Props->new( class => 'Observer' ) );
+    my $observer     = $context->spawn( Yakt::Props->new(
+        class => 'Yakt::Streams::Actors::Observer',
+        args  => {
+            on_next => sub ($context, $message) {
+                $context->logger->log(INFO, "->OnNext called" ) if INFO;
+                push @RESULTS => $message->value;
+            },
+            on_completed => sub ($context, $message) {
+                $context->logger->log(INFO, "->OnCompleted called" ) if INFO;
+                $context->stop;
+                $COMPLETED++;
+            },
+            on_error => sub ($context, $message) {
+                $context->logger->log(INFO, "->OnError called" ) if INFO;
+                $ERROR = $message->error;
+            }
+        }
+    ));
 
     $observerable->send( Yakt::Streams::Subscribe->new( subscriber => $observer ));
 });
 
 $sys->loop_until_done;
 
-is($Observer::COMPLETED, 1, '... got the right completed number');
-ok(!defined($Observer::ERROR), '... got no error');
-is_deeply(\@Observer::RESULTS, [ 0 .. 10 ], '... got the expected results');
+is($COMPLETED, 1, '... got the right completed number');
+ok(!defined($ERROR), '... got no error');
+is_deeply(\@RESULTS, [ 0 .. 10 ], '... got the expected results');
 
 done_testing;
 

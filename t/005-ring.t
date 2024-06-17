@@ -8,6 +8,10 @@ use Test::More;
 use ok 'Yakt::System';
 use ok 'Yakt::Logging';
 
+# TODO:
+# actually model a TokenRing network
+# https://en.wikipedia.org/wiki/Token_Ring#Access_control
+
 class StartRing    { field $length :param :reader; }
 class RingComplete { field $end    :param :reader; }
 class VisitRings   { field $count  :param :reader; }

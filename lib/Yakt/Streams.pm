@@ -10,4 +10,7 @@ package Yakt::Streams {
 
     use Yakt::Streams::Subscribe;
     use Yakt::Streams::OnSubscribe;
+
+    use Yakt::Streams::Unsubscribe;
+    use Yakt::Streams::OnUnsubscribe;
 }

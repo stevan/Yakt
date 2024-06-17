@@ -44,10 +44,22 @@ class Yakt::Streams::Flow {
 
     method run ($context) {
 
-        my $start = $context->spawn( Yakt::Props->new(
-            class => Yakt::Streams::Actors::Observable::FromSource::,
-            args  => { source => $source }
-        ));
+        # TODO:
+        # if there is something missing, then send
+        # the error to the $to, and if there is no
+        # $to, then throw a runtime exception
+        #
+        # maybe??
+
+        my $start = ref $source eq 'CODE'
+            ? $context->spawn( Yakt::Props->new(
+                class => Yakt::Streams::Actors::Observable::FromProducer::,
+                args  => { producer => $source }
+              ))
+            : $context->spawn( Yakt::Props->new(
+                class => Yakt::Streams::Actors::Observable::FromSource::,
+                args  => { source => $source }
+              ));
 
         my @ops;
         foreach my $operator ( @operators ) {

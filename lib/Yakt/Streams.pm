@@ -13,4 +13,7 @@ package Yakt::Streams {
 
     use Yakt::Streams::Unsubscribe;
     use Yakt::Streams::OnUnsubscribe;
+
+    use Yakt::Streams::Flow;
+    use Yakt::Streams::Actors::Observer;
 }

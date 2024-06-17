@@ -5,7 +5,7 @@ use experimental qw[ class ];
 
 use Yakt::Streams::OnNext;
 
-class Yakt::Streams::Actors::Operator::Map :isa(Yakt::Streams::Actors::Operator) {
+class Yakt::Streams::Actors::Operator::Grep :isa(Yakt::Streams::Actors::Operator) {
     use Yakt::Logging;
 
     field $f :param;
@@ -15,8 +15,8 @@ class Yakt::Streams::Actors::Operator::Map :isa(Yakt::Streams::Actors::Operator)
         $self->subscriber->send(
              Yakt::Streams::OnNext->new(
                 sender => $context->self,
-                value  => $f->( $message->value )
+                value  => $message->value
             )
-        );
+        ) if $f->( $message->value );
     }
 }

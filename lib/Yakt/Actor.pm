@@ -17,7 +17,7 @@ class Yakt::Actor {
 
     ADJUST {
         $logger   = Yakt::Logging->logger(__PACKAGE__) if LOG_LEVEL;
-        $behavior = behavior_for( blessed $self );
+        $behavior = __CLASS__->behavior_for;
     }
 
     # ...

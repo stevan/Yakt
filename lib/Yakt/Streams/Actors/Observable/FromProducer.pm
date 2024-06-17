@@ -26,6 +26,7 @@ class Yakt::Streams::Actors::Observable::FromSource :isa(Yakt::Actor) {
     }
 
     method unsubscribe :Receive(Yakt::Streams::UnSubscribe) ($context, $message) {
+        $context->logger->log(DEBUG, "Unsubscribe called" ) if DEBUG;
         my $subscriber = $message->subscriber;
         $subscriber->send( Yakt::Streams::OnUnsubscribe->new );
         $context->stop;

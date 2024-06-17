@@ -15,6 +15,10 @@
 ________________/_( /_(____/_(__/_(____________|_|\__,_|_|\_\\__|______________
 ```
 
+## EXAMPLE
+
+Coming soon ...
+
 ## TRY IT OUT
 
 First get the latest Perl, and configure your shell accordingly.

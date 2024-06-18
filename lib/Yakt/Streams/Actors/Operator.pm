@@ -51,22 +51,14 @@ class Yakt::Streams::Actors::Operator :isa(Yakt::Actor) {
 
     # events sent from observables ...
 
-    method on_next ($context, $message) {
-        $context->logger->log(DEBUG, "OnNext called" ) if DEBUG;
-        $subscriber->send(
-             Yakt::Streams::OnNext->new(
-                sender => $context->self,
-                value  => $message->value
-            )
-        );
-    }
+    method on_next;
 
-    method on_completed :Receive(Yakt::Streams::OnCompleted) ($context, $message) {
+    method on_completed ($context, $message) {
         $context->logger->log(DEBUG, "OnCompleted called" ) if DEBUG;
         $subscriber->send( Yakt::Streams::OnCompleted->new( sender => $context->self ) );
     }
 
-    method on_error :Receive(Yakt::Streams::OnError) ($context, $message) {
+    method on_error ($context, $message) {
         $context->logger->log(DEBUG, "OnError called" ) if DEBUG;
         $subscriber->send( Yakt::Streams::OnError->new( error => $message->error ) );
     }

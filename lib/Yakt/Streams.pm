@@ -28,5 +28,5 @@ package Yakt::Streams {
 
     # Composors ...
 
-    use Yakt::Streams::Flow;
+    use Yakt::Streams::Composers::Flow;
 }

@@ -45,7 +45,7 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
 }
 
 my $sys = Yakt::System->new->init(sub ($context) {
-    Yakt::Streams::Flow->new
+    Yakt::Streams::Composers::Flow->new
         ->from ( Source->new( source => [ 0 .. 10 ] ) )
         #->from ( sub { state $i = 0; return $i <= 10 ? $i++ : undef } )
         ->map  ( sub ($x) { $x * 2 } )

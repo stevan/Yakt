@@ -8,10 +8,8 @@ use Yakt::Streams::OnCompleted;
 use Yakt::Streams::OnError;
 use Yakt::Streams::Subscribe;
 use Yakt::Streams::OnSubscribe;
-use Yakt::Streams::Unsubscribe;
-use Yakt::Streams::OnUnsubscribe;
 
-class Yakt::Streams::Actors::Observable::FromProducer :isa(Yakt::Actor) {
+class Yakt::Streams::Actors::Observable::FromProducer :isa(Yakt::Streams::Actors::Observable) {
     use Yakt::Logging;
 
     field $producer :param;
@@ -30,12 +28,5 @@ class Yakt::Streams::Actors::Observable::FromProducer :isa(Yakt::Actor) {
         } catch ($e) {
             $subscriber->send( Yakt::Streams::OnError->new( error => $e, sender => $context->self ) );
         }
-    }
-
-    method unsubscribe :Receive(Yakt::Streams::Unsubscribe) ($context, $message) {
-        $context->logger->log(DEBUG, "Unsubscribe called" ) if DEBUG;
-        my $subscriber = $message->subscriber;
-        $subscriber->send( Yakt::Streams::OnUnsubscribe->new );
-        $context->stop;
     }
 }

@@ -9,7 +9,7 @@ use Yakt::Streams::Actors::Observable::FromProducer;
 use Yakt::Streams::Actors::Operator::Map;
 use Yakt::Streams::Actors::Operator::Grep;
 
-class Yakt::Streams::Flow {
+class Yakt::Streams::Composers::Flow {
 
     field $source;
     field $sink;

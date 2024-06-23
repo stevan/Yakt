@@ -126,8 +126,11 @@ class Yakt::System {
 
         if (@to_run) {
             $logger->log( DEBUG, "... found (".scalar(@to_run).") mailbox(s) to run" ) if DEBUG;
+
             # run all the mailboxes ...
+            $_->prepare foreach @to_run;
             my @unhandled = map $_->tick, @to_run;
+            $_->finish foreach @to_run;
 
             # handle any unhandled messages
             if (@unhandled) {

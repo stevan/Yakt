@@ -13,14 +13,16 @@ use Yakt::System::Signals;
 class Yakt::System::Mailbox::State {
     use constant STARTING   => 0;
     use constant ALIVE      => 1;
-    use constant SUSPENDED  => 2;
-    use constant STOPPING   => 3;
-    use constant RESTARTING => 4;
-    use constant STOPPED    => 5;
+    use constant RUNNING    => 2;
+    use constant SUSPENDED  => 3;
+    use constant STOPPING   => 4;
+    use constant RESTARTING => 5;
+    use constant STOPPED    => 6;
 
     our @STATES = qw(
         STARTING
         ALIVE
+        RUNNING
         SUSPENDED
         STOPPING
         RESTARTING
@@ -47,6 +49,8 @@ class Yakt::System::Mailbox {
 
     field @children;
 
+    field $inbox;
+
     field @messages;
     field @signals;
 
@@ -63,32 +67,31 @@ class Yakt::System::Mailbox {
 
         $logger = Yakt::Logging->logger($self->to_string) if LOG_LEVEL;
 
+        $inbox = \@messages;
+
         push @signals => Yakt::System::Signals::Started->new;
     }
 
     method to_string { sprintf "Mailbox(%s)[%03d]" => $props->class, $ref->pid }
+
+    method props  { $props  }
+    method system { $system }
 
     method parent   { $parent   }
     method children { @children }
 
     method add_child ($child) { push @children => $child }
 
-    method props  { $props  }
-    method system { $system }
+    method ref     { $ref     }
+    method context { $context }
 
     method is_starting   { $state == Yakt::System::Mailbox::State->STARTING   }
-    method is_alive      { $state == Yakt::System::Mailbox::State->ALIVE      }
+    method is_alive      { $state == Yakt::System::Mailbox::State->ALIVE     || $self->is_running }
+    method is_running    { $state == Yakt::System::Mailbox::State->RUNNING    }
     method is_suspended  { $state == Yakt::System::Mailbox::State->SUSPENDED  }
     method is_stopping   { $state == Yakt::System::Mailbox::State->STOPPING   }
     method is_restarting { $state == Yakt::System::Mailbox::State->RESTARTING }
     method is_stopped    { $state == Yakt::System::Mailbox::State->STOPPED    }
-
-    method ref     { $ref     }
-    method context { $context }
-
-    method to_be_run { @messages || @signals }
-
-    method enqueue_message ($message) { push @messages => $message }
 
     method suspend { $state = Yakt::System::Mailbox::State->SUSPENDED }
     method resume  { $state = Yakt::System::Mailbox::State->ALIVE     }
@@ -97,13 +100,28 @@ class Yakt::System::Mailbox {
         $self->suspend;
         push @signals => Yakt::System::Signals::Restarting->new;
     }
+
     method stop {
         $self->suspend;
         push @signals => Yakt::System::Signals::Stopping->new;
     }
 
-    method notify ($signal) {
-        push @signals => $signal;
+    method to_be_run { @messages || @signals }
+
+    method notify          ($signal)  { push @signals => $signal }
+    method enqueue_message ($message) { push @$inbox => $message }
+
+    method prepare {
+        $inbox = [];
+        $state = Yakt::System::Mailbox::State->RUNNING
+            if $state == Yakt::System::Mailbox::State->ALIVE;
+    }
+
+    method finish {
+        push @messages => @$inbox;
+        $inbox = \@messages;
+        $state = Yakt::System::Mailbox::State->ALIVE
+            if $state == Yakt::System::Mailbox::State->RUNNING;
     }
 
     method tick {

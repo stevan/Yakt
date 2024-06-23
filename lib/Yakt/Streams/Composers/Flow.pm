@@ -16,10 +16,10 @@ class Yakt::Streams::Composers::Flow {
 
     field @operators;
 
-    method from_source ($source) {
+    method from_source ($src) {
         $source = Yakt::Props->new(
             class => Yakt::Streams::Actors::Observable::FromSource::,
-            args  => { source => $source }
+            args  => { source => $src }
         );
         return $self;
     }
@@ -62,21 +62,18 @@ class Yakt::Streams::Composers::Flow {
 
         # spawn everything ...
         my $start = $source isa Yakt::Props ? $context->spawn( $source ) : $source;
+        my $end   = $sink   isa Yakt::Props ? $context->spawn( $sink   ) : $sink;
+        my @ops   = map $context->spawn( $_ ), @operators;
 
-        die $start;
-
-        my @ops;
-        foreach my $operator ( @operators ) {
-            push @ops => $context->spawn( $operator );
-        }
-
+        # connect everything ...
         my $op = $start;
         foreach my $next (@ops) {
             $op->send( Yakt::Streams::Subscribe->new( subscriber => $next ));
             $op = $next;
         }
+        $op->send( Yakt::Streams::Subscribe->new( subscriber => $end ));
 
-        $op->send( Yakt::Streams::Subscribe->new( subscriber => $sink ));
+        # ... and go!
     }
 
 }

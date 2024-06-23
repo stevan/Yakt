@@ -16,37 +16,32 @@ use Yakt::Streams::Actors::Operator::Map;
 my $INPUT  = __FILE__;
 my $OUTPUT = __FILE__.'.temp';
 
+unlink $OUTPUT if -e $OUTPUT;
+
 my $sys = Yakt::System->new->init(sub ($context) {
 
-    my $fh_in = IO::File->new;
-    $fh_in->open($INPUT, 'r');
+    my $fh_in  = IO::File->new($INPUT,  'r');
+    my $fh_out = IO::File->new($OUTPUT, 'w');
 
-    my $fh_out = IO::File->new;
-    $fh_out->open($OUTPUT, '+>');
-
-    my $input  = $context->spawn( Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh_in  }));
-    my $output = $context->spawn( Yakt::Props->new( class => Yakt::IO::Actors::StreamWriter::, args => { fh => $fh_out }));
-
-    my $map = $context->spawn( Yakt::Props->new( class => Yakt::Streams::Actors::Operator::Map::, args => {
-        f => sub ($line) {
+    Yakt::Streams::Composers::Flow->new
+        ->from(
+            Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh_in  } )
+        )->map( sub ($line) {
             state $line_no = 0;
             sprintf '%4d : %s', ++$line_no, $line
-        }
-    }));
-
-    $input->send( Yakt::Streams::Subscribe->new( subscriber => $map ) );
-    $map->send( Yakt::Streams::Subscribe->new( subscriber => $output ) );
+        })->to(
+            Yakt::Props->new( class => Yakt::IO::Actors::StreamWriter::, args => { fh => $fh_out } )
+        )->run(
+            $context
+        );
 
 });
 
 $sys->loop_until_done;
 
 subtest '... did this work' => sub {
-    my $expected = IO::File->new;
-    $expected->open($INPUT, 'r');
-
-    my $got = IO::File->new;
-    $got->open($OUTPUT, 'r');
+    my $expected = IO::File->new($INPUT, 'r');
+    my $got      = IO::File->new($OUTPUT, 'r');
 
     my @got      = <$got>;
     my @expected = <$expected>;

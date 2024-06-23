@@ -43,23 +43,19 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
 }
 
 my $sys = Yakt::System->new->init(sub ($context) {
+    my $fh = IO::File->new(__FILE__, 'r');
 
-    my $fh = IO::File->new;
-    $fh->open(__FILE__, 'r');
-
-    my $input  = $context->spawn( Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh }));
-    my $output = $context->spawn( Yakt::Props->new( class => MyObserver:: ));
-
-    my $map = $context->spawn( Yakt::Props->new( class => Yakt::Streams::Actors::Operator::Map::, args => {
-        f => sub ($line) {
+    Yakt::Streams::Composers::Flow->new
+        ->from(
+            Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh })
+        )->map( sub ($line) {
             state $line_no = 0;
             sprintf '%4d : %s', ++$line_no, $line
-        }
-    }));
-
-    $input->send( Yakt::Streams::Subscribe->new( subscriber => $map ) );
-    $map->send( Yakt::Streams::Subscribe->new( subscriber => $output ) );
-
+        })->to(
+            Yakt::Props->new( class => MyObserver:: )
+        )->run(
+            $context
+        );
 });
 
 $sys->loop_until_done;

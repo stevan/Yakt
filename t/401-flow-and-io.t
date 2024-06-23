@@ -40,27 +40,25 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
         $context->logger->log(INFO, "->OnUnsubscribe called" ) if INFO;
         $context->stop;
     }
-
 }
-
 
 my $sys = Yakt::System->new->init(sub ($context) {
 
     my $fh = IO::File->new;
     $fh->open(__FILE__, 'r');
 
-    my $s = $context->spawn( Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh }));
-    my $o = $context->spawn( Yakt::Props->new( class => MyObserver:: ));
+    my $input  = $context->spawn( Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh }));
+    my $output = $context->spawn( Yakt::Props->new( class => MyObserver:: ));
 
-    my $m = $context->spawn( Yakt::Props->new( class => Yakt::Streams::Actors::Operator::Map::, args => {
+    my $map = $context->spawn( Yakt::Props->new( class => Yakt::Streams::Actors::Operator::Map::, args => {
         f => sub ($line) {
             state $line_no = 0;
             sprintf '%4d : %s', ++$line_no, $line
         }
     }));
 
-    $s->send( Yakt::Streams::Subscribe->new( subscriber => $m ) );
-    $m->send( Yakt::Streams::Subscribe->new( subscriber => $o ) );
+    $input->send( Yakt::Streams::Subscribe->new( subscriber => $map ) );
+    $map->send( Yakt::Streams::Subscribe->new( subscriber => $output ) );
 
 });
 

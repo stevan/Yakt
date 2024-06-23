@@ -23,7 +23,7 @@ class Yakt::IO::Actors::StreamReader :isa(Yakt::Actor) {
         $buffer = Yakt::System::IO::Reader::LineBuffered->new( buffer_size => 128 );
     }
 
-    # ... Signals
+    # ... Observable interface
 
     method subscribe :Receive(Yakt::Streams::Subscribe) ($context, $message) {
         $context->logger->log(DEBUG, "Subscribe called" ) if DEBUG;
@@ -49,6 +49,8 @@ class Yakt::IO::Actors::StreamReader :isa(Yakt::Actor) {
 
         $context->stop;
     }
+
+    # ... Signals
 
     method on_stopping :Signal(Yakt::System::Signals::Stopping) ($context, $signal) {
         if ($watcher) {

@@ -17,7 +17,7 @@ class Yakt::System::IO::Selector::Socket :isa(Yakt::System::IO::Selector) {
     field $logger;
 
     ADJUST {
-        $logger = Yakt::Logging->logger('System::Timers') if LOG_LEVEL;
+        $logger = Yakt::Logging->logger(__PACKAGE__) if LOG_LEVEL;
     }
 
     method watch_for_read  { $reading || $listening  }

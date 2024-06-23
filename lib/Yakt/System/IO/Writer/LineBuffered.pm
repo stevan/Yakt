@@ -15,16 +15,16 @@ class Yakt::System::IO::Writer::LineBuffered {
         $logger = Yakt::Logging->logger(__PACKAGE__) if LOG_LEVEL;
     }
 
-    method can_write { !! @buffer }
-
     method buffered_write (@to_write) { push @buffer => @to_write }
 
     method write ($fh) {
         $logger->log( DEBUG, "write event for ($fh)" ) if DEBUG;
         while (@buffer) {
-            my $line = pop @buffer;
+            my $line = shift @buffer;
 
             $logger->log( DEBUG, "Writing line ...[ $line ]" ) if DEBUG;
+            $line .= "\n" unless $line =~ /\n$/;
+
             $fh->syswrite( $line, length($line) );
         }
 

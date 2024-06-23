@@ -26,6 +26,7 @@ class Yakt::Streams::Actors::Observable::FromProducer :isa(Yakt::Streams::Actors
             }
             $subscriber->send( Yakt::Streams::OnCompleted->new( sender => $context->self ) );
         } catch ($e) {
+            chomp $e;
             $subscriber->send( Yakt::Streams::OnError->new( error => $e, sender => $context->self ) );
         }
     }

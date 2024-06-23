@@ -46,7 +46,9 @@ class Yakt::System::Actors::Root :isa(Yakt::Actor) {
                     $init->($users->context);
                     $logger->notification("FINISHING INITIALIZATION") if DEBUG;
                 } catch ($e) {
+                    chomp $e;
                     $logger->log(ERROR, "!!!!!! Error running init callback for $context with ($e)" ) if ERROR;
+                    $users->context->stop;
                 }
             }
         } elsif ($signal isa Yakt::System::Signals::Stopping) {

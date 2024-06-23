@@ -134,6 +134,7 @@ class Yakt::System::Timers {
             try {
                 $t->callback->();
             } catch ($e) {
+                chomp $e;
                 $logger->log( ERROR, "Timer callback failed ($timer) because: $e" ) if ERROR;
             }
         }

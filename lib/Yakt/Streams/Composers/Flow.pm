@@ -16,6 +16,22 @@ class Yakt::Streams::Composers::Flow {
 
     field @operators;
 
+    method from_source ($source) {
+        $source = Yakt::Props->new(
+            class => Yakt::Streams::Actors::Observable::FromSource::,
+            args  => { source => $source }
+        );
+        return $self;
+    }
+
+    method from_callback ($f) {
+        $source = Yakt::Props->new(
+            class => Yakt::Streams::Actors::Observable::FromProducer::,
+            args  => { producer => $f }
+        );
+        return $self;
+    }
+
     method from ($from) {
         $source = $from;
         return $self;
@@ -27,46 +43,31 @@ class Yakt::Streams::Composers::Flow {
     }
 
     method map ($f) {
-        push @operators => {
+        push @operators => Yakt::Props->new(
             class => Yakt::Streams::Actors::Operator::Map::,
             args  => { f => $f }
-        };
+        );
         return $self;
     }
 
     method grep ($f) {
-        push @operators => {
+        push @operators => Yakt::Props->new(
             class => Yakt::Streams::Actors::Operator::Grep::,
             args  => { f => $f }
-        };
+        );
         return $self;
     }
 
     method run ($context) {
 
-        # TODO:
-        # if there is something missing, then send
-        # the error to the $to, and if there is no
-        # $to, then throw a runtime exception
-        #
-        # maybe??
+        # spawn everything ...
+        my $start = $source isa Yakt::Props ? $context->spawn( $source ) : $source;
 
-        my $start = ref $source eq 'CODE'
-            ? $context->spawn( Yakt::Props->new(
-                class => Yakt::Streams::Actors::Observable::FromProducer::,
-                args  => { producer => $source }
-              ))
-            : $context->spawn( Yakt::Props->new(
-                class => Yakt::Streams::Actors::Observable::FromSource::,
-                args  => { source => $source }
-              ));
+        die $start;
 
         my @ops;
         foreach my $operator ( @operators ) {
-            push @ops => $context->spawn( Yakt::Props->new(
-                class => $operator->{class},
-                args  => $operator->{args},
-            ));
+            push @ops => $context->spawn( $operator );
         }
 
         my $op = $start;

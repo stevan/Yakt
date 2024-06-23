@@ -92,4 +92,11 @@ class Yakt::IO::Actors::StreamReader :isa(Yakt::Actor) {
             $watcher->is_reading = false;
         }
     }
+
+    # ... IO Errors
+
+    method got_io_error :Signal(Yakt::System::Signals::IO::GotError) ($context, $signal) {
+        # error from select() ???
+        # TODO : handle this ...
+    }
 }

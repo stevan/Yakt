@@ -60,7 +60,7 @@ subtest '... did this work' => sub {
     }
     ok(!$error, '... all the lines match');
 
-    unlink $OUTPUT;
+    #unlink $OUTPUT;
 };
 
 done_testing;

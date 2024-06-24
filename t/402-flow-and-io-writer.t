@@ -18,15 +18,15 @@ my $OUTPUT = __FILE__.'.temp';
 
 unlink $OUTPUT if -e $OUTPUT;
 
-class MySingleObserver :isa(Yakt::Actor) {
+class MySingleObserver :isa(Yakt::Streams::Actors::Observer::ForSingle) {
     use Yakt::Logging;
 
-    method on_success :Receive(Yakt::Streams::OnSuccess) ($context, $message) {
+    method on_success ($context, $message) {
         $context->logger->log(INFO, "->OnSuccess called" ) if INFO;
         $context->stop;
     }
 
-    method on_error :Receive(Yakt::Streams::OnError) ($context, $message) {
+    method on_error ($context, $message) {
         $context->logger->log(INFO, "->OnError called with error: ".$message->error ) if INFO;
         $context->stop;
     }

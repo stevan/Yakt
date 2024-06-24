@@ -2,6 +2,11 @@
 # TODO
 <!---------------------------------------------------------------------------->
 
+
+https://reactivex.io/documentation/contract.html
+
+
+
 - make become/unbcome just do one thing
     - add become_stacked/unbecome_stacked for that if desired
     - how do they work together?

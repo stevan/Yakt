@@ -8,6 +8,7 @@ use Yakt::Streams::Actors::Observable::FromProducer;
 
 use Yakt::Streams::Actors::Operator::Map;
 use Yakt::Streams::Actors::Operator::Grep;
+use Yakt::Streams::Actors::Operator::Peek;
 
 class Yakt::Streams::Composers::Flow {
 
@@ -58,6 +59,14 @@ class Yakt::Streams::Composers::Flow {
         return $self;
     }
 
+    method peek ($f) {
+        push @operators => Yakt::Props->new(
+            class => Yakt::Streams::Actors::Operator::Peek::,
+            args  => { f => $f }
+        );
+        return $self;
+    }
+
     method run ($context) {
 
         # spawn everything ...
@@ -74,6 +83,7 @@ class Yakt::Streams::Composers::Flow {
         $op->send( Yakt::Streams::Subscribe->new( subscriber => $end ));
 
         # ... and go!
+        return;
     }
 
 }

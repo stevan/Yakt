@@ -41,17 +41,34 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
         $context->logger->log(INFO, "->OnUnsubscribe called" ) if INFO;
         $context->stop;
     }
+}
 
+class MySingleObserver :isa(Yakt::Actor) {
+    use Yakt::Logging;
+
+    method on_success :Receive(Yakt::Streams::OnSuccess) ($context, $message) {
+        $context->logger->log(INFO, "->OnSuccess called" ) if INFO;
+        $context->stop;
+    }
+
+    method on_error :Receive(Yakt::Streams::OnError) ($context, $message) {
+        $context->logger->log(INFO, "->OnError called with error: ".$message->error ) if INFO;
+        $context->stop;
+    }
 }
 
 my $sys = Yakt::System->new->init(sub ($context) {
     Yakt::Streams::Composers::Flow->new
         ->from_source( Source->new( source => [ 0 .. 10 ] ) )
-        #->from_callback( sub { state $i = 0; return $i <= 10 ? $i++ : undef } )
         ->map  ( sub ($x) { $x * 2 } )
         ->grep ( sub ($x) { ($x % 2) == 0 } )
-        ->to   ( $context->spawn( Yakt::Props->new( class => 'MyObserver' )) )
-        ->run  ( $context );
+        ->to   ( Yakt::Props->new( class => 'MyObserver' ) )
+        ->spawn( $context )
+        ->send(
+            Yakt::Streams::Subscribe->new(
+                subscriber => $context->spawn( Yakt::Props->new(class => MySingleObserver::))
+            )
+        );
 });
 
 $sys->loop_until_done;

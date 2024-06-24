@@ -56,6 +56,8 @@ class Yakt::System::Mailbox {
 
     field $logger;
 
+    field $halted = false;
+
     my $PID_SEQ = 0;
 
     ADJUST {
@@ -86,7 +88,7 @@ class Yakt::System::Mailbox {
     method context { $context }
 
     method is_starting   { $state == Yakt::System::Mailbox::State->STARTING   }
-    method is_alive      { $state == Yakt::System::Mailbox::State->ALIVE     || $self->is_running }
+    method is_alive      { $state == Yakt::System::Mailbox::State->ALIVE || $self->is_running }
     method is_running    { $state == Yakt::System::Mailbox::State->RUNNING    }
     method is_suspended  { $state == Yakt::System::Mailbox::State->SUSPENDED  }
     method is_stopping   { $state == Yakt::System::Mailbox::State->STOPPING   }
@@ -139,6 +141,31 @@ class Yakt::System::Mailbox {
                 $state = Yakt::System::Mailbox::State->ALIVE;
                 $actor = $props->new_actor;
             }
+            elsif ($sig isa Yakt::System::Signals::Terminated) {
+                my $child = $sig->ref;
+
+                $logger->log(INTERNALS, "got TERMINATED($child) while in state(".$Yakt::System::Mailbox::State::STATES[$state].")" ) if INTERNALS;
+
+                $logger->log(INTERNALS, "CHILDREN: ", join ', ' => @children ) if INTERNALS;
+                $logger->log(INTERNALS, "BEFORE num children: ".scalar(@children) ) if INTERNALS;
+                @children = grep { $_->pid ne $child->pid } @children;
+                $logger->log(INTERNALS, "AFTER num children: ".scalar(@children) ) if INTERNALS;
+
+                # TODO: the logic here needs some testing
+                # I am not 100% sure it is correct.
+                if (@children == 0) {
+                    $logger->log(INTERNALS, "no more children, resuming state(".$Yakt::System::Mailbox::State::STATES[$state].")" ) if INTERNALS;
+                    if ($state == Yakt::System::Mailbox::State->STOPPING) {
+                        unshift @signals => Yakt::System::Signals::Stopped->new;
+                        last;
+                    }
+                    elsif ($state == Yakt::System::Mailbox::State->RESTARTING) {
+                        unshift @signals => Yakt::System::Signals::Started->new;
+                        last;
+                    }
+                    # otherwise just keep on going ...
+                }
+            }
 
             try {
                 $actor->signal($context, $sig);
@@ -184,35 +211,10 @@ class Yakt::System::Mailbox {
 
                 if ($parent) {
                     $logger->log(DEBUG, "is Stopped, notifying parent($parent)" ) if DEBUG;
-                    $parent->context->notify( Yakt::System::Signals::Terminated->new( ref => $ref ) );
+                    $parent->context->notify( Yakt::System::Signals::Terminated->new( ref => $ref, with_error => $halted ) );
                 }
                 # and exit
                 last;
-            }
-            elsif ($sig isa Yakt::System::Signals::Terminated) {
-                my $child = $sig->ref;
-
-                $logger->log(INTERNALS, "got TERMINATED($child) while in state(".$Yakt::System::Mailbox::State::STATES[$state].")" ) if INTERNALS;
-
-                $logger->log(INTERNALS, "CHILDREN: ", join ', ' => @children ) if INTERNALS;
-                $logger->log(INTERNALS, "BEFORE num children: ".scalar(@children) ) if INTERNALS;
-                @children = grep { $_->pid ne $child->pid } @children;
-                $logger->log(INTERNALS, "AFTER num children: ".scalar(@children) ) if INTERNALS;
-
-                # TODO: the logic here needs some testing
-                # I am not 100% sure it is correct.
-                if (@children == 0) {
-                    $logger->log(INTERNALS, "no more children, resuming state(".$Yakt::System::Mailbox::State::STATES[$state].")" ) if INTERNALS;
-                    if ($state == Yakt::System::Mailbox::State->STOPPING) {
-                        unshift @signals => Yakt::System::Signals::Stopped->new;
-                        last;
-                    }
-                    elsif ($state == Yakt::System::Mailbox::State->RESTARTING) {
-                        unshift @signals => Yakt::System::Signals::Started->new;
-                        last;
-                    }
-                    # otherwise just keep on going ...
-                }
             }
         }
 
@@ -249,6 +251,7 @@ class Yakt::System::Mailbox {
                 elsif ($action == $supervisor->HALT) {
                     $logger->log(DEBUG, "supervisor said to halt ...") if DEBUG;
                     unshift @messages => @msgs;
+                    $halted = $e;
                     last;
                 }
             }

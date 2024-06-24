@@ -2,10 +2,17 @@
 # TODO
 <!---------------------------------------------------------------------------->
 
+- implement the Contract!
+    - https://reactivex.io/documentation/contract.html
 
-https://reactivex.io/documentation/contract.html
+
+## Flows
+
+- We need to have full control over the lifecycle of a Flow
+    - this means a Flow should be an Actor instead of a Composer
 
 
+## Become/Unbecome
 
 - make become/unbcome just do one thing
     - add become_stacked/unbecome_stacked for that if desired
@@ -15,17 +22,6 @@ https://reactivex.io/documentation/contract.html
     - should I accept a CODE ref as well?
     - do they have any kind of lifecycle?
     - do they accept signals?
-
-## Streams - non-reactive
-
-- Add some actors for this:
-    - Observers:
-        - Observer : which takes callbacks for events
-        - ObserverSink : which takes a Sink object, and collects everything into it
-    - Observables:
-        - Observable : takes a source to publish
-    - Processors:
-        - Map, Grep, etc.
 
 ## IO
 

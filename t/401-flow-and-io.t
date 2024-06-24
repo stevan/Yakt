@@ -42,19 +42,35 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
     }
 }
 
+class MySingleObserver :isa(Yakt::Actor) {
+    use Yakt::Logging;
+
+    method on_success :Receive(Yakt::Streams::OnSuccess) ($context, $message) {
+        $context->logger->log(INFO, "->OnSuccess called" ) if INFO;
+        $context->stop;
+    }
+
+    method on_error :Receive(Yakt::Streams::OnError) ($context, $message) {
+        $context->logger->log(INFO, "->OnError called with error: ".$message->error ) if INFO;
+        $context->stop;
+    }
+}
+
 my $sys = Yakt::System->new->init(sub ($context) {
     my $fh = IO::File->new(__FILE__, 'r');
 
     Yakt::Streams::Composers::Flow->new
-        ->from(
-            Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh })
-        )->map( sub ($line) {
+        ->from(Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh }))
+        ->map( sub ($line) {
             state $line_no = 0;
             sprintf '%4d : %s', ++$line_no, $line
-        })->to(
-            Yakt::Props->new( class => MyObserver:: )
-        )->run(
-            $context
+        })
+        ->to(Yakt::Props->new( class => MyObserver:: ))
+        ->spawn( $context )
+        ->send(
+            Yakt::Streams::Subscribe->new(
+                subscriber => $context->spawn( Yakt::Props->new(class => MySingleObserver::))
+            )
         );
 });
 

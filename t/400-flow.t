@@ -46,13 +46,18 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
 class MySingleObserver :isa(Yakt::Streams::Actors::Observer::ForSingle) {
     use Yakt::Logging;
 
+    our $SUCCESS;
+    our $ERROR;
+
     method on_success ($context, $message) {
         $context->logger->log(INFO, "->OnSuccess called" ) if INFO;
+        $SUCCESS++;
         $context->stop;
     }
 
     method on_error ($context, $message) {
         $context->logger->log(INFO, "->OnError called with error: ".$message->error ) if INFO;
+        $ERROR++;
         $context->stop;
     }
 }
@@ -76,6 +81,9 @@ $sys->loop_until_done;
 is($MyObserver::COMPLETED, 1, '... got the right completed number');
 ok(!defined($MyObserver::ERROR), '... got no error');
 is_deeply(\@MyObserver::RESULTS, [ grep { ($_ % 2) == 0 }  map $_*2, 0 .. 10 ], '... got the expected results');
+
+is($MySingleObserver::SUCCESS, 1, '... got the right success number');
+ok(!defined($MySingleObserver::ERROR), '... got no error');
 
 done_testing;
 

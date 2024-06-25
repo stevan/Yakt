@@ -9,8 +9,10 @@ use ok 'Yakt::System';
 
 use Yakt::Streams;
 
-use Yakt::IO::Actors::StreamReader;
-use Yakt::Streams::Actors::Operator::Map;
+class Source {
+    field $source :param;
+    method next { shift @$source }
+}
 
 class MyObserver :isa(Yakt::Streams::Actors::Observer) {
     use Yakt::Logging;
@@ -28,7 +30,6 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
         $context->logger->log(INFO, "->OnCompleted called" ) if INFO;
         $message->sender->send( Yakt::Streams::Unsubscribe->new( subscriber => $context->self ) );
         $COMPLETED++;
-        $context->logger->log(INFO, (join "\n" => @RESULTS) ) if INFO;
     }
 
     method on_error ($context, $message) {
@@ -62,15 +63,10 @@ class MySingleObserver :isa(Yakt::Streams::Actors::Observer::ForSingle) {
 }
 
 my $sys = Yakt::System->new->init(sub ($context) {
-    my $fh = IO::File->new(__FILE__, 'r');
-
     Yakt::Streams::Composers::Flow->new
-        ->from(Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh }))
-        ->map( sub ($line) {
-            state $line_no = 0;
-            sprintf '%4d : %s', ++$line_no, $line
-        })
-        ->to(Yakt::Props->new( class => MyObserver:: ))
+        ->from_source( Source->new( source => [ 0 .. 10 ] ) )
+        ->map  ( sub ($x) { die "WTF!" if $x == 5; $x * 2 } )
+        ->to   ( Yakt::Props->new( class => 'MyObserver' ) )
         ->spawn( $context )
         ->send(
             Yakt::Streams::Subscribe->new(
@@ -81,11 +77,12 @@ my $sys = Yakt::System->new->init(sub ($context) {
 
 $sys->loop_until_done;
 
-like($MyObserver::RESULTS[-1], qr/# THE END$/, '... got the expected last line for fh');
+is($MyObserver::COMPLETED, 0, '... got the right completed number');
+ok(!defined($MyObserver::ERROR), '... got no error (because it happened upstream)');
+is_deeply(\@MyObserver::RESULTS, [ grep { ($_ % 2) == 0 }  map $_*2, 0 .. 4 ], '... got the expected results');
 
-is($MySingleObserver::SUCCESS, 1, '... got the right success number');
-ok(!defined($MySingleObserver::ERROR), '... got no error');
+ok(!defined($MySingleObserver::SUCCESS), '... got the right success value');
+is($MySingleObserver::ERROR, 1, '... got expected error');
 
 done_testing;
 
-# THE END

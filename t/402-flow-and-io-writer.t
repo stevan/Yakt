@@ -21,13 +21,18 @@ unlink $OUTPUT if -e $OUTPUT;
 class MySingleObserver :isa(Yakt::Streams::Actors::Observer::ForSingle) {
     use Yakt::Logging;
 
+    our $SUCCESS;
+    our $ERROR;
+
     method on_success ($context, $message) {
         $context->logger->log(INFO, "->OnSuccess called" ) if INFO;
+        $SUCCESS++;
         $context->stop;
     }
 
     method on_error ($context, $message) {
         $context->logger->log(INFO, "->OnError called with error: ".$message->error ) if INFO;
+        $ERROR++;
         $context->stop;
     }
 }
@@ -54,6 +59,9 @@ my $sys = Yakt::System->new->init(sub ($context) {
 });
 
 $sys->loop_until_done;
+
+is($MySingleObserver::SUCCESS, 1, '... got the right success number');
+ok(!defined($MySingleObserver::ERROR), '... got no error');
 
 subtest '... did this work' => sub {
     my $expected = IO::File->new($INPUT, 'r');

@@ -56,7 +56,7 @@ class Yakt::System::Mailbox {
 
     field $logger;
 
-    field $halted = false;
+    field $halted_on;
 
     my $PID_SEQ = 0;
 
@@ -211,7 +211,7 @@ class Yakt::System::Mailbox {
 
                 if ($parent) {
                     $logger->log(DEBUG, "is Stopped, notifying parent($parent)" ) if DEBUG;
-                    $parent->context->notify( Yakt::System::Signals::Terminated->new( ref => $ref, with_error => $halted ) );
+                    $parent->context->notify( Yakt::System::Signals::Terminated->new( ref => $ref, with_error => $halted_on ) );
                 }
                 # and exit
                 last;
@@ -251,7 +251,7 @@ class Yakt::System::Mailbox {
                 elsif ($action == $supervisor->HALT) {
                     $logger->log(DEBUG, "supervisor said to halt ...") if DEBUG;
                     unshift @messages => @msgs;
-                    $halted = $e;
+                    $halted_on = $e;
                     last;
                 }
             }

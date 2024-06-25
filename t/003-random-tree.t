@@ -62,5 +62,7 @@ my $sys = Yakt::System->new->init(sub ($context) {
 
 $sys->loop_until_done;
 
+is($RandomTree::STARTED, $RandomTree::STOPPED, '... the random tree start/stop counts match');
+
 done_testing;
 

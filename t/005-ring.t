@@ -30,6 +30,9 @@ class Ring :isa(Yakt::Actor) {
         $is_root = !$prev;
     }
 
+    our $STARTED;
+    our $VISITED;
+
     method start_ring :Receive(StartRing) ($context, $message) {
         $context->logger->log(INFO, "StartRing called ...") if INFO;
         if ($message->length <= 0) {
@@ -42,6 +45,7 @@ class Ring :isa(Yakt::Actor) {
             }));
             $context->logger->log(INFO, "Created $next, sending StartRing to it") if INFO;
             $next->send(StartRing->new( length => $message->length - 1 ));
+            $STARTED++;
         }
     }
 
@@ -72,6 +76,7 @@ class Ring :isa(Yakt::Actor) {
         } else {
             $context->logger->log(INFO, "Visited the next($next) ring ...") if INFO;
             $next->send( VisitRings->new( count => $message->count - 1 ));
+            $VISITED++;
         }
     }
 
@@ -93,6 +98,7 @@ my $sys = Yakt::System->new->init(sub ($context) {
 
 $sys->loop_until_done;
 
-
+is($Ring::VISITED, 1000, '... got the right visited count');
+is($Ring::STARTED, 100, '... got the right started count');
 
 done_testing;

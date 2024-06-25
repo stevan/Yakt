@@ -127,9 +127,12 @@ class Tester :isa(Yakt::Actor) {
     use Yakt::Logging;
     use Data::Dumper;
 
+    our $RESULT;
+
     method hello :Receive(Parse::Result) ($context, $message) {
         $context->logger->log(INFO, 'got the Parse::Result message') if INFO;
         $context->logger->log(INFO, Dumper($message->payload)) if INFO;
+        $RESULT = $message->payload;
         $message->sender->context->stop;
         $context->stop;
     }
@@ -153,6 +156,18 @@ my $sys = Yakt::System->new->init(sub ($context) {
 
 $sys->loop_until_done;
 
-
+is_deeply(
+    $Tester::RESULT,
+    {
+        status => {
+            method  => 'GET',
+            url     => '/index.html',
+            headers => [
+                'Hostname: example.com'
+            ]
+        }
+    },
+    '... got the expected parse structure back'
+);
 
 done_testing;

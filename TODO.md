@@ -6,10 +6,20 @@
     - https://reactivex.io/documentation/contract.html
 
 
-## Flows
+## Aggregate Observers
 
-- We need to have full control over the lifecycle of a Flow
-    - this means a Flow should be an Actor instead of a Composer
+- There should be an Observer + Single type
+    - aggregates all the OnNext items
+        - returns the final aggregated value to OnSuccess
+        - or returns OnError
+    - the StreamWriter already implements this
+
+- This can also handle Collect.Join() and such things
+    - anything that reduces a collect to a single value (Scalar, ArrayRef, etc)
+
+- This will be the Sink for Flows
+    - and pass its OnSuccess/OnError results to the Flow to be its "return value"
+        - because Flows are Singles
 
 
 ## Become/Unbecome

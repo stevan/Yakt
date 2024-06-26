@@ -18,7 +18,7 @@ my $OUTPUT = __FILE__.'.temp';
 
 unlink $OUTPUT if -e $OUTPUT;
 
-class MySingleObserver :isa(Yakt::Streams::Actors::Observer::ForSingle) {
+class MySingleObserver :isa(Yakt::Streams::Actors::Observer::Single) {
     use Yakt::Logging;
 
     our $SUCCESS;

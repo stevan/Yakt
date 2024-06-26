@@ -10,7 +10,7 @@ use Yakt::Streams::OnError;
 use Yakt::Streams::OnSubscribe;
 use Yakt::Streams::OnUnsubscribe;
 
-class Yakt::Streams::Actors::Observer::ForSingle :isa(Yakt::Actor) {
+class Yakt::Streams::Actors::Observer::Single :isa(Yakt::Actor) {
     use Yakt::Logging;
 
     method on_subscribe   ($, $) {}

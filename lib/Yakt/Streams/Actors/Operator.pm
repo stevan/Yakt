@@ -13,6 +13,10 @@ use Yakt::Streams::OnSubscribe;
 use Yakt::Streams::Unsubscribe;
 use Yakt::Streams::OnUnsubscribe;
 
+# This is called a Subject in Rx but
+# it occupies a differnt space here
+# so it gets a different name :)
+
 class Yakt::Streams::Actors::Operator :isa(Yakt::Actor) {
     use Yakt::Logging;
 

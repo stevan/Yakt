@@ -42,7 +42,7 @@ class MyObserver :isa(Yakt::Streams::Actors::Observer) {
     }
 }
 
-class MySingleObserver :isa(Yakt::Streams::Actors::Observer::ForSingle) {
+class MySingleObserver :isa(Yakt::Streams::Actors::Observer::Single) {
     use Yakt::Logging;
 
     our $SUCCESS;

@@ -13,7 +13,8 @@ use Yakt::System::IO::Writer::LineBuffered;
 class Yakt::IO::Actors::StreamWriter :isa(Yakt::Actor) {
     use Yakt::Logging;
 
-    field $fh :param;
+    field $path :param = undef;
+    field $fh   :param = undef;
 
     field $source;
 
@@ -23,6 +24,8 @@ class Yakt::IO::Actors::StreamWriter :isa(Yakt::Actor) {
     field $buffer;
 
     ADJUST {
+        ($path || $fh) || die 'Cannot create a StreamWriter without either a path or a fh';
+
         $buffer = Yakt::System::IO::Writer::LineBuffered->new;
     }
 
@@ -30,6 +33,25 @@ class Yakt::IO::Actors::StreamWriter :isa(Yakt::Actor) {
 
     method on_subscribe :Receive(Yakt::Streams::OnSubscribe) ($context, $message) {
         $context->logger->log(INFO, "->OnSubscribe called" ) if INFO;
+
+        if (!$fh) {
+            $fh = IO::File->new( $path, '>' );
+            if (!$fh) {
+                $context->logger->log(ERROR, "Could not open path($path) for writing because $!") if ERROR;
+                # NOTE:
+                # I am not sure what is the right thing to do here,
+                # because this does not seem like it is. However, it
+                # will cause the Flow to stop, which is probably
+                # what we actually want, because pushing an error
+                # backwards up the chain is not possible, and sending
+                # an error forwards is not possible because this is a
+                # Sink and there is no way to go forwards. So the only
+                # real solution is to abort the whole flow ASAP, and
+                # this is about as good as we can get to doing that
+                # albiet a bit violently.
+                die "Could not open path($path) for writing because $!";
+            }
+        }
 
         $source = $message->sender;
 

@@ -13,13 +13,16 @@ use Yakt::System::IO::Reader::LineBuffered;
 class Yakt::IO::Actors::StreamReader :isa(Yakt::Actor) {
     use Yakt::Logging;
 
-    field $fh :param;
+    field $path :param = undef;
+    field $fh   :param = undef;
 
     field $subscriber;
     field $watcher;
     field $buffer;
 
     ADJUST {
+        ($path || $fh) || die 'Cannot create a StreamReader without either a path or a fh';
+
         $buffer = Yakt::System::IO::Reader::LineBuffered->new( buffer_size => 128 );
     }
 
@@ -27,6 +30,16 @@ class Yakt::IO::Actors::StreamReader :isa(Yakt::Actor) {
 
     method subscribe :Receive(Yakt::Streams::Subscribe) ($context, $message) {
         $context->logger->log(DEBUG, "Subscribe called" ) if DEBUG;
+
+        if (!$fh) {
+            $fh = IO::File->new( $path, '<' );
+            if (!$fh) {
+                $context->logger->log(ERROR, "Could not open path($path) for reading because $!") if ERROR;
+                $message->subscriber->send(Yakt::Streams::OnError->new( error => "$!" ));
+                $context->stop;
+                return;
+            }
+        }
 
         $subscriber = $message->subscriber;
         $subscriber->send( Yakt::Streams::OnSubscribe->new( sender => $context->self ) );

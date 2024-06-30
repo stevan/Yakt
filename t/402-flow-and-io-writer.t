@@ -39,16 +39,13 @@ class MySingleObserver :isa(Yakt::Streams::Actors::Observer::Single) {
 
 my $sys = Yakt::System->new->init(sub ($context) {
 
-    my $fh_in  = IO::File->new($INPUT,  'r');
-    my $fh_out = IO::File->new($OUTPUT, 'w');
-
     Yakt::Streams::Composers::Flow->new
-        ->from(Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { fh => $fh_in  } ))
+        ->from(Yakt::Props->new( class => Yakt::IO::Actors::StreamReader::, args => { path => $INPUT } ))
         ->map( sub ($line) {
             state $line_no = 0;
             sprintf '%4d : %s', ++$line_no, $line
         })
-        ->to(Yakt::Props->new( class => Yakt::IO::Actors::StreamWriter::, args => { fh => $fh_out } ))
+        ->to(Yakt::Props->new( class => Yakt::IO::Actors::StreamWriter::, args => { path => $OUTPUT } ))
         ->spawn( $context )
         ->send(
             Yakt::Streams::Subscribe->new(

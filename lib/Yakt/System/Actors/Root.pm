@@ -17,7 +17,8 @@ class Yakt::System::Actors::Root :isa(Yakt::Actor) {
     field $users;
 
     method signal ($context, $signal) {
-        my $logger = $context->logger;
+        my $logger;
+        $logger = $context->logger if DEBUG;
 
         if ($signal isa Yakt::System::Signals::Started) {
             $logger->notification("STARTING SETUP") if DEBUG;

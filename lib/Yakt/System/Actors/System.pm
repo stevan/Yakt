@@ -13,7 +13,8 @@ class Yakt::System::Actors::System :isa(Yakt::Actor) {
     field $dead_letter_queue;
 
     method signal ($context, $signal) {
-        my $logger = $context->logger;
+        my $logger;
+        $logger = $context->logger if DEBUG;
 
         if ($signal isa Yakt::System::Signals::Started) {
             $logger->log(INTERNALS, sprintf 'Started %s' => $context->self ) if INTERNALS;

@@ -9,7 +9,8 @@ class Yakt::System::Actors::Users :isa(Yakt::Actor) {
     use Yakt::Logging;
 
     method signal ($context, $signal) {
-        my $logger = $context->logger;
+        my $logger;
+        $logger = $context->logger if DEBUG;
 
         if ($signal isa Yakt::System::Signals::Started) {
             $logger->log(INTERNALS, sprintf 'Started %s notifying parent(%s)' => $context->self, $context->parent ) if INTERNALS;

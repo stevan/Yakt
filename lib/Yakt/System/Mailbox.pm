@@ -48,6 +48,7 @@ class Yakt::System::Mailbox {
     field $actor;
 
     field @children;
+    field %watchers;
 
     field $inbox;
 
@@ -83,6 +84,8 @@ class Yakt::System::Mailbox {
     method children { @children }
 
     method add_child ($child) { push @children => $child }
+
+    method add_watcher ($watcher) { $watchers{refaddr $watcher} = $watcher }
 
     method ref     { $ref     }
     method context { $context }
@@ -209,10 +212,20 @@ class Yakt::System::Mailbox {
                 $actor    = undef;
                 @messages = ();
 
+                # notify the parent of termination
                 if ($parent) {
                     $logger->log(DEBUG, "is Stopped, notifying parent($parent)" ) if DEBUG;
                     $parent->context->notify( Yakt::System::Signals::Terminated->new( ref => $ref, with_error => $halted_on ) );
                 }
+
+                # notify the watchers of termination
+                if (my @watchers = values %watchers) {
+                    foreach my $watcher (@watchers) {
+                        $logger->log(DEBUG, "is Stopped, notifying watcher($watcher)" ) if DEBUG;
+                        $watcher->context->notify( Yakt::System::Signals::Terminated->new( ref => $ref, with_error => $halted_on ) );
+                    }
+                }
+
                 # and exit
                 last;
             }

@@ -50,6 +50,14 @@ class Yakt::Context {
         $system->despawn_actor( $ref );
     }
 
+    method watch ($to_watch) {
+        $to_watch->context->add_watcher( $ref );
+    }
+
+    method add_watcher ($watcher) {
+        $mailbox->add_watcher( $watcher );
+    }
+
     method notify ($signal) {
         $mailbox->notify( $signal )
     }

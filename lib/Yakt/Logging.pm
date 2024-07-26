@@ -6,7 +6,7 @@ use experimental qw[ class ];
 package Yakt::Logging {
     use Yakt::Logging::Logger;
 
-    use constant LOG_LEVEL => $ENV{ACKTOR_DEBUG} ? 4 : ($ENV{ACKTOR_LOG} // 0);
+    use constant LOG_LEVEL => $ENV{YAKT_DEBUG} ? 4 : ($ENV{YAKT_LOG} // 0);
 
     use constant INFO      => (LOG_LEVEL >= 1 ? 1 : 0);
     use constant WARN      => (LOG_LEVEL >= 2 ? 2 : 0);

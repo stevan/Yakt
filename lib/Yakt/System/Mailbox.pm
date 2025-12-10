@@ -304,3 +304,173 @@ class Yakt::System::Mailbox {
     }
 
 }
+
+__END__
+
+=pod
+
+=encoding UTF-8
+
+=head1 NAME
+
+Yakt::System::Mailbox - Actor lifecycle state machine and message queue
+
+=head1 DESCRIPTION
+
+C<Yakt::System::Mailbox> is an internal class that manages an actor's lifecycle
+and message processing. Each actor has exactly one Mailbox.
+
+B<This is an internal class.> Users should interact with actors through
+L<Yakt::Context> and L<Yakt::Ref>.
+
+=head1 STATUS
+
+B<Internal> - API may change. Documented for implementors.
+
+=head1 LIFECYCLE STATES
+
+The Mailbox implements a state machine with these states:
+
+    STARTING    Actor is initializing, waiting for Started signal
+        ↓
+    ALIVE       Actor is ready to process messages
+        ↓
+    RUNNING     Actor is currently processing (within a tick)
+        ↓
+    SUSPENDED   Actor is paused (during restart or error handling)
+        ↓
+    STOPPING    Actor is shutting down, waiting for children
+        ↓
+    RESTARTING  Actor is restarting, waiting for children
+        ↓
+    STOPPED     Actor has terminated
+
+=head2 State Transitions
+
+    STARTING → ALIVE         (on Started signal processed)
+    ALIVE → RUNNING          (on tick begin)
+    RUNNING → ALIVE          (on tick end)
+    ALIVE → SUSPENDED        (on stop/restart request)
+    SUSPENDED → STOPPING     (when children done, stopping)
+    SUSPENDED → RESTARTING   (when children done, restarting)
+    STOPPING → STOPPED       (on Stopped signal)
+    RESTARTING → STARTING    (loops back for restart)
+
+=head1 MESSAGE PROCESSING
+
+Each tick:
+
+=over 4
+
+=item 1. Process pending signals (lifecycle events)
+
+=item 2. If alive, process pending messages
+
+=item 3. Return unhandled messages to dead letter queue
+
+=back
+
+=head1 SIGNAL HANDLING
+
+Signals are processed before messages. Special handling:
+
+=over 4
+
+=item B<Started> - Creates the actor instance, transitions to ALIVE
+
+=item B<Stopping> - Stops children, waits, then sends Stopped
+
+=item B<Restarting> - Stops children, waits, then sends Started
+
+=item B<Stopped> - Destroys actor, notifies parent and watchers
+
+=item B<Terminated> - Received when a child/watched actor stops
+
+=back
+
+=head1 ERROR HANDLING
+
+Errors in signal handlers:
+
+=over 4
+
+=item * C<Started> errors → immediately stop the actor
+
+=item * C<Stopping>/C<Stopped>/C<Terminated> errors → log and continue
+
+=item * Other signals → defer to supervisor
+
+=back
+
+Errors in message handlers are always deferred to the supervisor.
+
+=head1 SUPERVISION
+
+When a message handler throws, the supervisor's C<supervise> method is called.
+It returns one of:
+
+=over 4
+
+=item * C<HALT> - Stop the actor
+
+=item * C<RESUME> - Skip the message, continue
+
+=item * C<RETRY> - Re-deliver the message
+
+=back
+
+The C<Restart> supervisor triggers HALT then a restart cycle.
+
+=head1 KEY METHODS
+
+=head2 to_be_run
+
+Returns true if the mailbox has pending messages or signals.
+
+=head2 tick
+
+Processes one cycle of signals and messages.
+
+=head2 stop
+
+Initiates graceful shutdown.
+
+=head2 restart
+
+Initiates restart sequence.
+
+=head2 notify($signal)
+
+Queues a signal for processing.
+
+=head2 enqueue_message($message)
+
+Queues a message for processing.
+
+=head1 FIELDS
+
+=over 4
+
+=item C<props> - The Props used to create this actor
+
+=item C<system> - The System this actor belongs to
+
+=item C<parent> - Parent actor's Ref
+
+=item C<pid> - Unique process ID
+
+=item C<ref> - This actor's Ref
+
+=item C<context> - This actor's Context
+
+=item C<supervisor> - Supervision strategy
+
+=item C<actor> - The actual actor instance (or undef if stopped)
+
+=back
+
+=head1 SEE ALSO
+
+L<Yakt::System>, L<Yakt::Actor>, L<Yakt::Context>
+
+=cut

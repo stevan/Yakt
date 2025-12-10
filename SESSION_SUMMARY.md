@@ -1,6 +1,106 @@
 # Yakt Session Summary - December 10, 2025
 
-## What Was Done
+## Session 2b: Documentation
+
+Added POD documentation to all main modules:
+
+### Documented Modules
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| `Yakt::System` | Stable | Main entry point, event loop |
+| `Yakt::Actor` | Stable | Base class, @Receive/@Signal |
+| `Yakt::Context` | Stable | Actor API facade |
+| `Yakt::Ref` | Stable | Actor reference for messaging |
+| `Yakt::Props` | Stable | Actor configuration |
+| `Yakt::Message` | Stable | Message base class |
+| `Yakt::Behavior` | Internal | Message routing |
+| `Yakt::System::Mailbox` | Internal | Lifecycle state machine |
+
+### Documentation Style
+
+- Honest about status (Stable, In Development, Internal)
+- KNOWN ISSUES and FUTURE WORK sections
+- Focused on implementors, not end-users yet
+- Examples in SYNOPSIS
+
+### Updated TODO.md
+
+Added items identified during documentation:
+- Signal Exporters
+- Actor Lookup by Alias
+- Context::add_selector
+- Backpressure mechanism
+
+---
+
+## Session 2a: Test Coverage Improvement
+
+This session focused on improving test coverage with a structured, focused test suite.
+
+### Test Structure Created
+
+```
+t/
+├── 100-timers/           # Timer functionality (4 tests)
+│   ├── 010-basic.t       # Single/multiple timer firing
+│   ├── 020-cancel.t      # Timer cancellation
+│   ├── 030-same-time.t   # Multiple timers at same time
+│   └── 040-callback-errors.t  # Error handling in callbacks
+│
+├── 110-props/            # Props configuration (4 tests)
+│   ├── 010-basic.t       # Basic Props creation
+│   ├── 020-alias.t       # Actor aliasing
+│   ├── 030-supervisor.t  # Supervisor configuration
+│   └── 040-new-actor.t   # Actor instantiation with args
+│
+├── 120-behavior/         # Behavior & message dispatch (4 tests)
+│   ├── 010-message-dispatch.t   # @Receive handlers
+│   ├── 020-signal-dispatch.t    # @Signal handlers
+│   ├── 030-unhandled-messages.t # Dead letter handling
+│   └── 040-unhandled-signals.t  # Partial signal handling
+│
+├── 130-context/          # Context API (6 tests)
+│   ├── 010-spawn.t       # Child spawning
+│   ├── 020-send.t        # Message sending
+│   ├── 030-stop.t        # Actor stopping
+│   ├── 040-watch.t       # Actor watching
+│   ├── 050-notify.t      # Signal notification
+│   └── 060-restart.t     # Manual restart
+│
+├── 140-ref/              # Ref API (3 tests)
+│   ├── 010-basic.t       # PID & stringification
+│   ├── 020-send.t        # Message delivery via ref
+│   └── 030-context-access.t  # Context access from ref
+│
+├── 210-supervision/      # Supervisor strategies (4 tests)
+│   ├── 010-stop.t        # Stop on error (default)
+│   ├── 020-resume.t      # Resume (skip failed message)
+│   ├── 030-retry.t       # Retry (re-deliver message)
+│   └── 040-restart.t     # Restart actor on error
+│
+└── 220-lifecycle/        # Parent-child lifecycle (4 tests)
+    ├── 010-parent-stops-children.t   # Children stop with parent
+    ├── 020-parent-waits-for-children.t  # Parent waits for children
+    ├── 030-terminated-signal.t       # Terminated notification
+    └── 040-restart-with-children.t   # Children during restart
+```
+
+### Test Statistics
+
+**49 tests, 163 assertions, all passing**
+
+```bash
+COLUMNS=80 LINES=24 prove -l t/
+```
+
+### Other Changes
+
+- Added skip for `t/300-io.t` when `IO::Socket::SSL` is not installed
+
+---
+
+## Session 1: Code Review and Bug Fixes
 
 This session performed a deep code review and fixed regressions in the Yakt actor system.
 
@@ -56,16 +156,6 @@ d71590f become-unbecome
 3e0e292 removing-streams
 ```
 
-### Test Status
-
-**20 tests, 78 assertions, all passing**
-
-```bash
-COLUMNS=80 LINES=24 prove -l t/0*.t t/1*.t t/2*.t t/310-buffered.t
-```
-
-Note: `t/300-io.t` requires `IO::Socket::SSL` which may not be installed.
-
 ### Files Modified
 
 **Core changes:**
@@ -85,7 +175,9 @@ Note: `t/300-io.t` requires `IO::Socket::SSL` which may not be installed.
 **Tests updated:**
 - `t/004-parser.t` - adjusted for proper become/unbecome semantics
 
-### Remaining Work (from TODO.md)
+---
+
+## Remaining Work (from TODO.md)
 
 - Behaviors helper function placement
 - Context method for adding Selectors
@@ -96,7 +188,7 @@ Note: `t/300-io.t` requires `IO::Socket::SSL` which may not be installed.
 - Signal exporters for Ready/Terminated
 - Better shutdown/zombie detection
 
-### Architecture Notes
+## Architecture Notes
 
 The core actor system (~750 lines) is now solid:
 - **System** - Event loop (timers → mailboxes → IO)

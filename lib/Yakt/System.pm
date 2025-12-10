@@ -223,4 +223,162 @@ class Yakt::System {
 
 }
 
+__END__
 
+=pod
+
+=encoding UTF-8
+
+=head1 NAME
+
+Yakt::System - The actor system runtime and event loop
+
+=head1 SYNOPSIS
+
+    use Yakt::System;
+
+    my $sys = Yakt::System->new->init(sub ($context) {
+        # Spawn actors, set up timers, etc.
+        my $actor = $context->spawn(Yakt::Props->new( class => 'MyActor' ));
+        $actor->send(SomeMessage->new);
+    });
+
+    $sys->loop_until_done;
+
+=head1 DESCRIPTION
+
+C<Yakt::System> is the main entry point for the Yakt actor framework. It manages
+the event loop, actor lifecycle, timer scheduling, and IO operations.
+
+The system runs a cooperative multitasking loop that processes:
+
+=over 4
+
+=item 1. Timers - scheduled callbacks
+
+=item 2. Mailboxes - actor message/signal processing
+
+=item 3. IO - non-blocking IO via selectors
+
+=back
+
+=head1 STATUS
+
+B<In Development> - Core functionality is stable and tested. The IO subsystem
+works but needs refinement. See L</KNOWN ISSUES>.
+
+=head1 METHODS
+
+=head2 new
+
+    my $sys = Yakt::System->new;
+
+Creates a new actor system. Must call C<init> before C<loop_until_done>.
+
+=head2 init($callback)
+
+    $sys->init(sub ($context) { ... });
+
+Initializes the system with a callback that receives the root context.
+Use this to spawn your initial actors. Returns C<$self> for chaining.
+
+=head2 loop_until_done
+
+    $sys->loop_until_done;
+
+Runs the event loop until all actors have stopped and there are no pending
+timers or IO operations.
+
+=head2 spawn_actor($props, $parent?)
+
+    my $ref = $sys->spawn_actor($props);
+    my $ref = $sys->spawn_actor($props, $parent_ref);
+
+Low-level actor spawning. Prefer using C<< $context->spawn >> instead.
+
+=head2 despawn_actor($ref)
+
+    $sys->despawn_actor($ref);
+
+Stops an actor. Prefer using C<< $context->stop >> instead.
+
+=head2 schedule_timer(%options)
+
+    my $timer = $sys->schedule_timer(
+        after    => 1.5,      # seconds
+        callback => sub { ... }
+    );
+
+Schedules a timer. Returns a timer object that can be cancelled.
+Prefer using C<< $context->schedule >> instead.
+
+=head2 shutdown
+
+    $sys->shutdown;
+
+Initiates graceful shutdown of the system. Stops the user actor tree first,
+then the system actors.
+
+=head2 io
+
+    my $io = $sys->io;
+
+Returns the IO manager for adding selectors. See L</IO OPERATIONS>.
+
+=head1 ARCHITECTURE
+
+The system creates a hierarchy of actors:
+
+    // (root)
+    ├── //sys
+    │   └── //sys/dead_letters
+    └── //usr
+        └── (your actors here)
+
+The C<//usr> actor is the parent of actors you spawn from the init callback.
+
+=head1 IO OPERATIONS
+
+IO operations use selectors registered with the IO manager:
+
+    # In an actor's signal handler
+    my $selector = Yakt::System::IO::Selector::Socket->new(
+        ref => $context->self,
+        fh  => $socket
+    );
+    $context->system->io->add_selector($selector);
+
+The actor receives IO signals like C<CanRead>, C<CanWrite>, C<IsConnected>.
+
+B<Note:> The IO API is functional but awkward. A C<< $context->add_selector >>
+method is planned.
+
+=head1 DEBUGGING
+
+Set environment variables to enable logging:
+
+    YAKT_LOG=1    # INFO level
+    YAKT_LOG=2    # WARN level
+    YAKT_LOG=3    # ERROR level
+    YAKT_DEBUG=1  # DEBUG level (verbose)
+    YAKT_LOG=5    # INTERNALS (very verbose)
+
+=head1 KNOWN ISSUES
+
+=over 4
+
+=item * No backpressure mechanism for mailboxes
+
+=item * IO selector API requires accessing C<< $context->system->io >> directly
+
+=item * No async logger (logging blocks the event loop)
+
+=item * No graceful handling of runaway actors
+
+=back
+
+=head1 SEE ALSO
+
+L<Yakt::Actor>, L<Yakt::Context>, L<Yakt::Props>, L<Yakt::Ref>
+
+=cut

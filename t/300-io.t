@@ -5,6 +5,11 @@ use experimental qw[ class ];
 
 use Test::More;
 
+BEGIN {
+    eval { require IO::Socket::SSL; require HTTP::Request; 1 }
+        or plan skip_all => 'IO::Socket::SSL and HTTP::Request required for this test';
+}
+
 use ok 'Yakt::System';
 
 use IO::Socket::SSL;

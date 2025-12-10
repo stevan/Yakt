@@ -26,6 +26,10 @@ class Yakt::Ref {
 
     method send ($message) {
         $logger->log(DEBUG, "send($message)" ) if DEBUG;
+        if ($context->is_stopped) {
+            $logger->log(WARN, "Attempt to send($message) to stopped actor, ignoring") if WARN;
+            return;
+        }
         $context->send_message( $self, $message );
     }
 

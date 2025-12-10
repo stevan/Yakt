@@ -38,6 +38,7 @@ class Yakt::System::Mailbox {
     field $system :param;
     field $props  :param;
     field $parent :param;
+    field $pid    :param;
 
     field $state;
 
@@ -59,11 +60,9 @@ class Yakt::System::Mailbox {
 
     field $halted_on;
 
-    my $PID_SEQ = 0;
-
     ADJUST {
         $state   = Yakt::System::Mailbox::State->STARTING;
-        $ref     = Yakt::Ref->new( pid => ++$PID_SEQ );
+        $ref     = Yakt::Ref->new( pid => $pid );
         $context = Yakt::Context->new( ref => $ref, mailbox => $self, system => $system );
 
         $supervisor = $props->supervisor;
@@ -174,8 +173,32 @@ class Yakt::System::Mailbox {
                 $actor->signal($context, $sig);
             } catch ($e) {
                 chomp $e;
-                # XXX - what to do here???
-                $logger->log(ERROR, "!!! GOT AN ERROR($e) WHILE PROCESSING SIGNALS!" ) if ERROR;
+                $logger->log(ERROR, "Got Error($e) while processing signal($sig)") if ERROR;
+
+                # Started errors are fatal - can't continue with broken initialization
+                if ($sig isa Yakt::System::Signals::Started) {
+                    $logger->log(ERROR, "Actor failed to start, stopping") if ERROR;
+                    $halted_on = $e;
+                    unshift @signals => Yakt::System::Signals::Stopped->new;
+                    last;
+                }
+                # Stopping/Stopped/Terminated errors - log but continue shutdown
+                elsif ($sig isa Yakt::System::Signals::Stopping
+                    || $sig isa Yakt::System::Signals::Stopped
+                    || $sig isa Yakt::System::Signals::Terminated) {
+                    # Already in shutdown path, just log and continue
+                }
+                # Other signals - defer to supervisor
+                else {
+                    my $action = $supervisor->supervise( $self, $e );
+                    if ($action == $supervisor->HALT) {
+                        $logger->log(DEBUG, "supervisor said to halt after signal error") if DEBUG;
+                        $halted_on = $e;
+                        $self->stop;
+                        last;
+                    }
+                    # RETRY/RESUME don't make sense for signals, treat as continue
+                }
             }
 
             if ($sig isa Yakt::System::Signals::Stopping) {

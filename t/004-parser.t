@@ -42,6 +42,8 @@ class HTTP::Parser :isa(Yakt::Actor) {
                 $result{status}{method} = 'GET';
                 $result{status}{url}    = '/index.html';
 
+                # Pop back to base, then push headers
+                $self->unbecome;
                 $self->become($parse_headers);
                 $context->self->send( Parse::Headers->new );
             }
@@ -65,9 +67,10 @@ class HTTP::Parser :isa(Yakt::Actor) {
                     # either parse the body, or finish
 
                 if ( $result{status}{method} eq 'GET' ) {
-                    $self->unbecome;
+                    $self->unbecome;  # pop back to base behavior
                     $context->self->send( Parse::Completed->new );
                 } else {
+                    $self->unbecome;  # pop back to base first
                     $self->become($parse_body);
                     $context->self->send( Parse::Body->new );
                 }

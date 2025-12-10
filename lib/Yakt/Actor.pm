@@ -22,8 +22,8 @@ class Yakt::Actor {
 
     # ...
 
-    method become ($b) { $behaviors[0] = $b; }
-    method unbecome    { @behaviors    = (); }
+    method become ($b) { unshift @behaviors => $b }
+    method unbecome    { shift @behaviors }
 
 
     method receive ($context, $message) {

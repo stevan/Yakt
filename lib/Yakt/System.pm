@@ -29,6 +29,7 @@ class Yakt::System {
     field $logger;
 
     field $shutting_down = false;
+    field $pid_seq = 0;
 
     ADJUST {
         $logger = Yakt::Logging->logger(__PACKAGE__) if LOG_LEVEL;
@@ -56,7 +57,12 @@ class Yakt::System {
 
     method spawn_actor ($props, $parent=undef) {
         $logger->log( INTERNALS, "spawn($props)" ) if INTERNALS;
-        my $mailbox = Yakt::System::Mailbox->new( props => $props, system => $self, parent => $parent );
+        my $mailbox = Yakt::System::Mailbox->new(
+            props  => $props,
+            system => $self,
+            parent => $parent,
+            pid    => ++$pid_seq,
+        );
         $lookup{ $mailbox->ref->pid } = $mailbox;
         if (my $alias = $mailbox->props->alias ) {
             $lookup{ $alias } = $mailbox;
@@ -178,6 +184,9 @@ class Yakt::System {
             # if we have timers or watchers, then loop again ...
             next if $timers->has_active_timers
                  || $io->has_active_selectors;
+
+            # if any mailbox is in a transitional state, keep looping
+            next if grep { $_->is_stopping || $_->is_restarting || $_->is_starting } @mailboxes;
 
             # if no timers, see if we have active children ...
             if ( my $usr = $lookup{ '//usr' } ) {

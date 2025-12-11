@@ -76,11 +76,12 @@ class Display {
 
         # Status bar with enhanced metrics
         my $status = sprintf(
-            "Gen: %d | Live: %d | Actors: %d | Msgs: %d | FPS: %.1f (target: %.0f)",
+            "Gen: %d | Live: %d | Actors: %d | Msgs: %d (%.0f/s) | FPS: %.1f (target: %.0f)",
             $stats->{generation},
             $stats->{live_count},
             $stats->{actor_count},
             $stats->{msg_count},
+            $stats->{msgs_per_sec},
             $stats->{fps},
             $stats->{target_fps},
         );
@@ -185,6 +186,9 @@ class World :isa(Yakt::Actor) {
 
     # Message count tracking
     field $message_count = 0;
+    field $last_msg_count = 0;
+    field $msgs_per_sec = 0;
+    field @mps_samples;  # rolling average for smoother display
 
     method on_start :Signal(Yakt::System::Signals::Started) ($context, $signal) {
         $display = Display->new(width => $width, height => $height);
@@ -434,7 +438,7 @@ class World :isa(Yakt::Actor) {
         $message_count++;  # Count incoming ReportState message
 
         if (@pending_reports == $expected_reports) {
-            # Calculate FPS
+            # Calculate FPS and msgs/sec
             my $now = time;
             if (defined $last_render_time) {
                 my $elapsed = $now - $last_render_time;
@@ -446,8 +450,19 @@ class World :isa(Yakt::Actor) {
                 $current_fps = 0;
                 $current_fps += $_ for @fps_samples;
                 $current_fps /= @fps_samples;
+
+                # Calculate msgs/sec
+                my $msgs_this_frame = $message_count - $last_msg_count;
+                my $instant_mps = $elapsed > 0 ? $msgs_this_frame / $elapsed : 0;
+
+                push @mps_samples, $instant_mps;
+                shift @mps_samples if @mps_samples > 5;
+                $msgs_per_sec = 0;
+                $msgs_per_sec += $_ for @mps_samples;
+                $msgs_per_sec /= @mps_samples;
             }
             $last_render_time = $now;
+            $last_msg_count = $message_count;
 
             # All reports in - render and compute next generation
             my @grid;
@@ -472,6 +487,7 @@ class World :isa(Yakt::Actor) {
                 live_count  => $live_count,
                 actor_count => $actor_count,
                 msg_count   => $message_count,
+                msgs_per_sec => $msgs_per_sec,
                 fps         => $current_fps,
                 target_fps  => 1 / $tick_interval,
             });
